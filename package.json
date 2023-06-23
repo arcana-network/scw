@@ -1,0 +1,31 @@
+{
+  "name": "scw",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "compile": "webpack"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "ts-loader": "^9.4.3",
+    "webpack": "^5.87.0",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "@biconomy-sdk-dev/ethers-lib": "^1.0.28",
+    "@biconomy-sdk-dev/smart-account": "^1.0.28",
+    "axios": "^1.4.0",
+    "crypto-browserify": "^3.12.0",
+    "ethers": "5.7",
+    "https-browserify": "^1.0.0",
+    "node-polyfill-webpack-plugin": "^2.0.1",
+    "os-browserify": "^0.3.0",
+    "stream-browserify": "^3.0.0",
+    "stream-http": "^3.2.0"
+  }
+}
