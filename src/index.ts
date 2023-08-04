@@ -1,27 +1,31 @@
 import { Signer, ethers } from "ethers";
-import SmartAccount from "@biconomy-sdk-dev/smart-account";
-// import { ChainId } from "@biconomy-sdk-dev/core-types";
-import axios from "axios";
 import {
-  ExternalProvider,
-  TransactionResponse,
-  Web3Provider,
-} from "@ethersproject/providers";
+  BiconomySmartAccount,
+  BiconomySmartAccountConfig,
+  DEFAULT_ENTRYPOINT_ADDRESS,
+} from "@biconomy/account";
+import { IBundler, Bundler, UserOpResponse } from "@biconomy/bundler";
+import {
+  BiconomyPaymaster,
+  PaymasterMode,
+  IHybridPaymaster,
+  SponsorUserOperationDto,
+} from "@biconomy/paymaster";
+
+import axios from "axios";
+import { ExternalProvider, Web3Provider } from "@ethersproject/providers";
 
 export class SCW {
   private api_key!: string;
   private gateway_url: string = "http://localhost:9010/";
   private provider!: Web3Provider;
   private wallet!: Signer;
-  private owner!: string;
   private scwAddress!: string;
-  private smart_account!: SmartAccount;
+  private smart_account!: BiconomySmartAccount;
 
   public async init(arcana_key: string, provider: ExternalProvider) {
-    console.log({ ethers });
     this.provider = new ethers.providers.Web3Provider(provider);
     this.wallet = await this.provider.getSigner();
-    this.owner = await this.wallet.getAddress();
 
     // fetch chain id from provider
     let chain_id = (await this.provider.getNetwork()).chainId;
@@ -33,25 +37,34 @@ export class SCW {
     );
     this.api_key = res.data.api_key;
 
-    let options = {
-      activeNetworkId: chain_id,
-      supportedNetworksIds: [chain_id],
-      networkConfig: [
-        {
-          chainId: chain_id,
-          dappAPIKey: this.api_key,
-        },
-      ],
+    const bundler: IBundler = new Bundler({
+      bundlerUrl: `https://bundler.biconomy.io/api/v2/${chain_id}/nJPK7B3ru.dd7f7861-190d-41bd-af80-6877f74b8f44`, // you can get this value from biconomy dashboard.
+      chainId: chain_id,
+      entryPointAddress: DEFAULT_ENTRYPOINT_ADDRESS,
+    });
+
+    let paymaster_url = `https://paymaster.biconomy.io/api/v1/${chain_id}/${this.api_key}`;
+    const paymaster = new BiconomyPaymaster({
+      paymasterUrl: paymaster_url, // you can get this value from biconomy dashboard.
+    });
+
+    const biconomySmartAccountConfig: BiconomySmartAccountConfig = {
+      signer: this.wallet,
+      chainId: chain_id,
+      paymaster: paymaster, //you can skip paymaster instance if you are not interested in transaction sponsorship
+      bundler: bundler,
     };
 
-    this.smart_account = new SmartAccount(this.provider, options);
-    await this.smart_account.init();
-    this.scwAddress = this.smart_account.address;
+    const biconomyAccount = new BiconomySmartAccount(
+      biconomySmartAccountConfig
+    );
+    this.smart_account = await biconomyAccount.init();
+    this.scwAddress = await this.smart_account.getSmartAccountAddress();
   }
 
   // function to get the owner
   public getOwner(): string {
-    return this.owner;
+    return this.smart_account.owner;
   }
 
   // function to get the scw address
@@ -59,28 +72,23 @@ export class SCW {
     return this.scwAddress;
   }
 
-  public async doTx(tx: any): Promise<TransactionResponse> {
-    const txResponse = await this.smart_account.sendTransaction({
-      transaction: tx,
-    });
-    return txResponse;
+  public async doTx(tx: any): Promise<UserOpResponse> {
+    const userOp = await this.smart_account.buildUserOp([tx]);
+    const biconomyPaymaster = this.smart_account
+      .paymaster as IHybridPaymaster<SponsorUserOperationDto>;
+
+    let paymasterServiceData: SponsorUserOperationDto = {
+      mode: PaymasterMode.SPONSORED,
+    };
+
+    const paymasterAndDataResponse =
+      await biconomyPaymaster.getPaymasterAndData(userOp, paymasterServiceData);
+    userOp.paymasterAndData = paymasterAndDataResponse.paymasterAndData;
+
+    const userOpResponse = await this.smart_account.sendUserOp(userOp);
+    return userOpResponse;
   }
 
-  public onTxHashGenerated(callback: any) {
-    this.smart_account.on("txHashGenerated", callback);
-  }
-
-  public onHashChanged(callback: any) {
-    this.smart_account.on("onHashChanged", callback);
-  }
-
-  public onTxMined(callback: any) {
-    this.smart_account.on("txMined", callback);
-  }
-
-  public onError(callback: any) {
-    this.smart_account.on("error", callback);
-  }
 }
 
 export { SCW as default };

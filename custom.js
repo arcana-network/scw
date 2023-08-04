@@ -351,7 +351,7 @@
     },
   ];
 
-  let amount = 0.1;
+  let amount = 0.001;
   const erc20Address = "0xfDB2aA382866bb31704558a0c439dA91353651a9";
   const toAddress = "0xA9E78cef5e6c0081b68AdA2554c04198DfF17C69";
   const Erc20Interface = new ethers.utils.Interface(erc20abi);
@@ -370,5 +370,6 @@
 
   let tx = await scw.doTx(tx1);
   await tx.wait();
-  console.log(`Transfer done ${tx.hash}`);
+  console.log(tx);
+  console.log("txHash:" + tx.userOpHash);
 })();

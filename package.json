@@ -1,6 +1,6 @@
 {
   "name": "@arcana/scw",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -18,7 +18,12 @@
   },
   "dependencies": {
     "@biconomy-sdk-dev/ethers-lib": "^1.0.28",
-    "@biconomy-sdk-dev/smart-account": "^1.0.28",
+    "@biconomy-sdk-dev/smart-account": "^1.0.29",
+    "@biconomy/account": "^3.1.0-alpha.0",
+    "@biconomy/bundler": "^3.1.0-alpha.0",
+    "@biconomy/common": "^3.1.0-alpha.0",
+    "@biconomy/core-types": "^3.1.0-alpha.0",
+    "@biconomy/paymaster": "^3.1.0-alpha.0",
     "axios": "^1.4.0",
     "crypto-browserify": "^3.12.0",
     "ethers": "5.7",
