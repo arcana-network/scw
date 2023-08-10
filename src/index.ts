@@ -17,16 +17,22 @@ import { ExternalProvider, Web3Provider } from "@ethersproject/providers";
 
 export class SCW {
   private api_key!: string;
-  private gateway_url: string = "http://localhost:9010/";
+  private gateway_url: string = "https://gateway-dev.arcana.network";
   private provider!: Web3Provider;
   private wallet!: Signer;
   private scwAddress!: string;
   private smart_account!: BiconomySmartAccount;
 
-  public async init(arcana_key: string, provider: ExternalProvider) {
+  public async init(
+    arcana_key: string,
+    provider: ExternalProvider,
+    gateway_url: string | undefined
+  ) {
     this.provider = new ethers.providers.Web3Provider(provider);
     this.wallet = await this.provider.getSigner();
-
+    if (gateway_url != undefined) {
+      this.gateway_url = gateway_url;
+    }
     // fetch chain id from provider
     let chain_id = (await this.provider.getNetwork()).chainId;
 
@@ -88,7 +94,6 @@ export class SCW {
     const userOpResponse = await this.smart_account.sendUserOp(userOp);
     return userOpResponse;
   }
-
 }
 
 export { SCW as default };

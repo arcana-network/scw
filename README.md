@@ -38,5 +38,5 @@ Do a transaction
 
   let tx = await scw.doTx(tx1);
   await tx.wait();
-  console.log(`Transfer done ${tx.hash}`)
+  console.log(`Transfer done ${tx.userOpHash}`)
 ```
