@@ -13,7 +13,7 @@ import {
 } from "@biconomy/paymaster";
 
 import axios from "axios";
-import { ExternalProvider, Web3Provider } from "@ethersproject/providers";
+import { Web3Provider } from "@ethersproject/providers";
 
 export class SCW {
   private api_key!: string;
@@ -25,10 +25,10 @@ export class SCW {
 
   public async init(
     arcana_key: string,
-    provider: ExternalProvider,
+    provider: Web3Provider,
     gateway_url: string | undefined
   ) {
-    this.provider = new ethers.providers.Web3Provider(provider);
+    this.provider = provider;
     this.wallet = await this.provider.getSigner();
     if (gateway_url != undefined) {
       this.gateway_url = gateway_url;
