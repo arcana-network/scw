@@ -25,11 +25,11 @@ export class SCW {
 
   public async init(
     arcana_key: string,
-    provider: Web3Provider,
+    wallet: Signer,
     gateway_url: string | undefined
   ) {
-    this.provider = provider;
-    this.wallet = await this.provider.getSigner();
+    this.provider = wallet.provider as Web3Provider;
+    this.wallet = wallet;
     if (gateway_url != undefined) {
       this.gateway_url = gateway_url;
     }

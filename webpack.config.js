@@ -1,7 +1,6 @@
 const path = require("path");
 const webpack = require("webpack");
 const { merge } = require("webpack-merge");
-const NodePolyfillPlugin = require("node-polyfill-webpack-plugin");
 
 const commonConfig = {
   entry: path.resolve(__dirname, "src", "index.ts"),
@@ -9,7 +8,7 @@ const commonConfig = {
   module: {
     rules: [
       {
-        test: /.(ts|js)x?$/,
+        test: /\.(ts|js)x?$/,
         use: {
           loader: "ts-loader",
           options: {
@@ -27,25 +26,7 @@ const commonConfig = {
   },
   resolve: {
     extensions: [".tsx", ".ts", ".js", ".json"],
-    fallback: {
-      url: require.resolve("url"),
-      assert: require.resolve("assert"),
-      fs: false,
-      net: false,
-      tls: false,
-      crypto: require.resolve("crypto-browserify"),
-      stream: require.resolve("stream-browserify"),
-      url: require.resolve("url"),
-      zlib: require.resolve("browserify-zlib"),
-      http: require.resolve("stream-http"),
-      https: require.resolve("https-browserify"),
-      assert: require.resolve("assert"),
-      os: require.resolve("os-browserify"),
-      path: require.resolve("path-browserify"),
-      "process/browser": require.resolve("process/browser"),
-    },
   },
-  plugins: [new NodePolyfillPlugin()],
   target: "web",
 };
 
@@ -57,7 +38,10 @@ const standaloneConfig = {
     }),
   ],
   resolve: {
-    fallback: {},
+    fallback: {
+      crypto: require.resolve("crypto-browserify"),
+      stream: require.resolve("stream-browserify"),
+    },
   },
   output: {
     path: path.resolve(__dirname, "dist/standalone"),
