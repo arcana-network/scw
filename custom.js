@@ -1,7 +1,14 @@
 (async () => {
   const scw = new arcana.scw.SCW();
-  await scw.init("afaded5624ccdd581c5eef10f8aac19d124ce4c7", window.ethereum);
-  console.log("Address:" + scw.getSCWAddress());
+  const provider = new ethers.providers.Web3Provider(window.ethereum);
+  const wallet = new ethers.Wallet(
+    "fdfc170c180e414201f2057243db4c2078a5c08252b41ace7e146398761e7975",
+    provider
+  );
+  console.log("EOA: ", await wallet.getAddress());
+  // const signer = provider.getSigner();
+  await scw.init("cd916a30d8dbdaa660e798d174cd5f2a8dbcffbf", wallet);
+  console.log("Address: " + scw.getSCWAddress());
 
   const erc20abi = [
     {
@@ -351,21 +358,28 @@
     },
   ];
 
-  let amount = 0.001;
+  let amount = 0.5;
   const erc20Address = "0xfDB2aA382866bb31704558a0c439dA91353651a9";
-  const toAddress = "0xA9E78cef5e6c0081b68AdA2554c04198DfF17C69";
+  const toAddress = "0xf194f509066e5ed787b2216ee93d136f2654c690";
   const Erc20Interface = new ethers.utils.Interface(erc20abi);
   // Encode an ERC-20 token transfer to recipientAddress of the specified amount
   const encodedData = Erc20Interface.encodeFunctionData("transfer", [
     toAddress,
-    ethers.utils.parseEther(amount + ""),
+    ethers.utils.parseUnits(amount + "", 18),
   ]);
 
   // You need to create transaction objects of the following interface
-  const tx1 = {
+  const tx0 = {
     from: scw.getSCWAddress(),
     to: erc20Address, // destination smart contract address
     data: encodedData,
+  };
+
+
+  const tx1 = {
+    from: scw.getSCWAddress(),
+    to: "0xE28F01Cf69f27Ee17e552bFDFB7ff301ca07e780",
+    value: ethers.utils.parseEther("0.005"),
   };
 
   let tx = await scw.doTx(tx1);

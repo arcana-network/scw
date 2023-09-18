@@ -1,6 +1,6 @@
 {
   "name": "@arcana/scw",
-  "version": "0.0.10",
+  "version": "0.0.14",
   "main": "dist/index.js",
   "files": [
     "dist",
@@ -25,7 +25,7 @@
     "@arcana/scw": "^0.0.8",
     "@biconomy-sdk-dev/ethers-lib": "^1.0.28",
     "@biconomy-sdk-dev/smart-account": "^1.0.29",
-    "@biconomy/account": "^3.1.0-alpha.0",
+    "@biconomy/account": "^3.0.0",
     "@biconomy/bundler": "^3.1.0-alpha.0",
     "@biconomy/common": "^3.1.0-alpha.0",
     "@biconomy/core-types": "^3.1.0-alpha.0",
