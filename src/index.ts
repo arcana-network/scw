@@ -83,28 +83,29 @@ export class SCW {
     const userOp = await this.smart_account.buildUserOp([tx]);
     const biconomyPaymaster = this.smart_account
       .paymaster as IHybridPaymaster<SponsorUserOperationDto>;
-    console.log(JSON.stringify(userOp));
-    // try {
-    let paymasterServiceData: SponsorUserOperationDto = {
-      mode: PaymasterMode.SPONSORED,
-      calculateGasLimits: true,
-    };
-    const paymasterAndDataResponse =
-      await biconomyPaymaster.getPaymasterAndData(userOp, paymasterServiceData);
-    userOp.paymasterAndData = paymasterAndDataResponse.paymasterAndData;
+    try {
+      let paymasterServiceData: SponsorUserOperationDto = {
+        mode: PaymasterMode.SPONSORED,
+        calculateGasLimits: true,
+      };
+      const paymasterAndDataResponse =
+        await biconomyPaymaster.getPaymasterAndData(
+          userOp,
+          paymasterServiceData
+        );
+      userOp.paymasterAndData = paymasterAndDataResponse.paymasterAndData;
 
-    if (
-      paymasterAndDataResponse.callGasLimit &&
-      paymasterAndDataResponse.verificationGasLimit &&
-      paymasterAndDataResponse.preVerificationGas
-    ) {
-      userOp.callGasLimit = paymasterAndDataResponse.callGasLimit;
-      userOp.verificationGasLimit =
-        paymasterAndDataResponse.verificationGasLimit;
-      userOp.preVerificationGas = paymasterAndDataResponse.preVerificationGas;
-    }
-    console.log({ paymasterAndDataResponse });
-    // } catch (e) {}
+      if (
+        paymasterAndDataResponse.callGasLimit &&
+        paymasterAndDataResponse.verificationGasLimit &&
+        paymasterAndDataResponse.preVerificationGas
+      ) {
+        userOp.callGasLimit = paymasterAndDataResponse.callGasLimit;
+        userOp.verificationGasLimit =
+          paymasterAndDataResponse.verificationGasLimit;
+        userOp.preVerificationGas = paymasterAndDataResponse.preVerificationGas;
+      }
+    } catch (e) {}
     const userOpResponse = await this.smart_account.sendUserOp(userOp);
     return userOpResponse;
   }

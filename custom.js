@@ -375,14 +375,13 @@
     data: encodedData,
   };
 
-
   const tx1 = {
     from: scw.getSCWAddress(),
     to: "0xE28F01Cf69f27Ee17e552bFDFB7ff301ca07e780",
     value: ethers.utils.parseEther("0.005"),
   };
 
-  let tx = await scw.doTx(tx1);
+  let tx = await scw.doTx(tx0);
   await tx.wait();
   console.log(tx);
   console.log("txHash:" + tx.userOpHash);
