@@ -358,7 +358,7 @@
     },
   ];
 
-  let amount = 0.5;
+  let amount = 50000;
   const erc20Address = "0xfDB2aA382866bb31704558a0c439dA91353651a9";
   const toAddress = "0xf194f509066e5ed787b2216ee93d136f2654c690";
   const Erc20Interface = new ethers.utils.Interface(erc20abi);
@@ -378,11 +378,11 @@
   const tx1 = {
     from: scw.getSCWAddress(),
     to: "0xE28F01Cf69f27Ee17e552bFDFB7ff301ca07e780",
-    value: ethers.utils.parseEther("0.005"),
+    value: "0xb5e620f48000",
   };
 
   let tx = await scw.doTx(tx0);
-  await tx.wait();
-  console.log(tx);
-  console.log("txHash:" + tx.userOpHash);
+  let txDetails = await tx.wait();
+  console.log("txHash:(CORRECT) " + txDetails.receipt.transactionHash);
+  console.log("txHash:(WRONG) " + tx.userOpHash);
 })();

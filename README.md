@@ -12,7 +12,7 @@ Initialising the SDK
 
 ```js
 const scw = new arcana.scw.SCW();
-await scw.init("<app_id>", window.ethereum);
+await scw.init("<app_id>", window.ethereum, "<gateway_url>");
 ```
 
 Do a transaction
