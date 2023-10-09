@@ -17,7 +17,7 @@ import { Web3Provider } from "@ethersproject/providers";
 
 export class SCW {
   private api_key!: string;
-  private gateway_url: string = "https://gateway-dev.arcana.network";
+  private gateway_url: string = "https://gateway-dev.arcana.network/";
   private provider!: Web3Provider;
   private wallet!: Signer;
   private scwAddress!: string;
@@ -31,6 +31,10 @@ export class SCW {
     this.provider = wallet.provider as Web3Provider;
     this.wallet = wallet;
     if (gateway_url != undefined) {
+      // check if gateway url ends with / if yes then remove it
+      if (gateway_url.endsWith("/")) {
+        gateway_url = gateway_url.slice(0, -1);
+      }
       this.gateway_url = gateway_url;
     }
     // fetch chain id from provider

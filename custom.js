@@ -7,7 +7,11 @@
   );
   console.log("EOA: ", await wallet.getAddress());
   // const signer = provider.getSigner();
-  await scw.init("cd916a30d8dbdaa660e798d174cd5f2a8dbcffbf", wallet);
+  await scw.init(
+    "202f960fe310c451b5a074620d79ef77a3b190fb",
+    wallet,
+    "https://gateway001-testnet.arcana.network"
+  );
   console.log("Address: " + scw.getSCWAddress());
 
   const erc20abi = [
@@ -381,7 +385,7 @@
     value: "0xb5e620f48000",
   };
 
-  let tx = await scw.doTx(tx0);
+  let tx = await scw.doTx(tx1);
   let txDetails = await tx.wait();
   console.log("txHash:(CORRECT) " + txDetails.receipt.transactionHash);
   console.log("txHash:(WRONG) " + tx.userOpHash);
