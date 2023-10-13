@@ -48,7 +48,7 @@ export class SCW {
     this.api_key = res.data.api_key;
 
     const bundler: IBundler = new Bundler({
-      bundlerUrl: `https://bundler.biconomy.io/api/v2/${chain_id}/nJPK7B3ru.dd7f7861-190d-41bd-af80-6877f74b8f44`, // you can get this value from biconomy dashboard.
+      bundlerUrl: `https://bundler.biconomy.io/api/v2/${chain_id}/cJPK7B3ru.kj908Yuj-89hY-45ic-lRe5-6877flTvjy561`, // you can get this value from biconomy dashboard.
       chainId: chain_id,
       entryPointAddress: DEFAULT_ENTRYPOINT_ADDRESS,
     });
