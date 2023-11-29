@@ -22,6 +22,8 @@ export class SCW {
   private wallet!: Signer;
   private scwAddress!: string;
   private smart_account!: BiconomySmartAccount;
+  private pre_scw: boolean = false;
+  private smart_account_owner!: string;
 
   public async init(
     arcana_key: string,
@@ -30,6 +32,16 @@ export class SCW {
   ) {
     this.provider = wallet.provider as Web3Provider;
     this.wallet = wallet;
+    // @ts-ignore
+    if (this.provider.provider?.addressType == "scw") {
+      this.pre_scw = true;
+      // @ts-ignore
+      this.scwAddress = await this.wallet.getAddress();
+      let abi = ["function owner() view returns (address)"];
+      let contract = new ethers.Contract(this.scwAddress, abi, this.provider);
+      this.smart_account_owner = await contract.owner();
+      return;
+    }
     if (gateway_url != undefined) {
       // check if gateway url ends with / if yes then remove it
       if (gateway_url.endsWith("/")) {
@@ -71,11 +83,12 @@ export class SCW {
     );
     this.smart_account = await biconomyAccount.init();
     this.scwAddress = await this.smart_account.getSmartAccountAddress();
+    this.smart_account_owner = await this.smart_account.owner;
   }
 
   // function to get the owner
-  public getOwner(): string {
-    return this.smart_account.owner;
+  public async getOwner(): Promise<string> {
+    return this.smart_account_owner;
   }
 
   // function to get the scw address
@@ -84,6 +97,19 @@ export class SCW {
   }
 
   public async doTx(tx: any): Promise<UserOpResponse> {
+    if (this.pre_scw) {
+      tx = await this.wallet.sendTransaction(tx);
+      let orignalWait = tx.wait;
+      tx.wait = async () => {
+        let res = await orignalWait();
+        if (!res.receipt) {
+          res.receipt = {};
+        }
+        res.receipt.transactionHash = tx.hash;
+        return res;
+      };
+      return tx;
+    }
     const userOp = await this.smart_account.buildUserOp([tx]);
     const biconomyPaymaster = this.smart_account
       .paymaster as IHybridPaymaster<SponsorUserOperationDto>;

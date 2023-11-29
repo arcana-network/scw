@@ -7,8 +7,10 @@ export declare class SCW {
     private wallet;
     private scwAddress;
     private smart_account;
+    private pre_scw;
+    private smart_account_owner;
     init(arcana_key: string, wallet: Signer, gateway_url: string | undefined): Promise<void>;
-    getOwner(): string;
+    getOwner(): Promise<string>;
     getSCWAddress(): string;
     doTx(tx: any): Promise<UserOpResponse>;
 }

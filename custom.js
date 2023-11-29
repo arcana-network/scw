@@ -8,7 +8,7 @@
   console.log("EOA: ", await wallet.getAddress());
   // const signer = provider.getSigner();
   await scw.init(
-    "202f960fe310c451b5a074620d79ef77a3b190fb",
+    "9557e54337094bcba1f75502b1f8c38b207c1ef3",
     wallet,
     "https://gateway001-testnet.arcana.network"
   );
