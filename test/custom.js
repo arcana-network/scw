@@ -2,6 +2,7 @@ import { erc20abi } from "./erc20.js";
 
 (async () => {
   const scw = new arcana.scw.SCW();
+  await window.ethereum.enable();
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   let signer = await provider.getSigner();
   console.log("EOA: ", await signer.getAddress());
