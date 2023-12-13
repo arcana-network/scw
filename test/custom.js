@@ -1,4 +1,4 @@
-import { erc20abi } from "./erc20";
+import { erc20abi } from "./erc20.js";
 
 (async () => {
   const scw = new arcana.scw.SCW();
