@@ -11,7 +11,7 @@ import { erc20abi } from "./erc20.js";
 
   let amount = ethers.utils.parseUnits("0", 6);
   const erc20Address = "0xd513E4537510C75E24f941f159B7CAFA74E7B3B9";
-  const toAddress = "0x20fa38a4f8Af2E36f1Cc14caad2E603fbA5C535c";
+  const toAddress = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
   const Erc20Interface = new ethers.utils.Interface(erc20abi);
   // Encode an ERC-20 token transfer to recipientAddress of the specified amount
   const encodedData = Erc20Interface.encodeFunctionData("approve", [
