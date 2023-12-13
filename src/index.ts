@@ -110,7 +110,14 @@ export class SCW {
       };
       return tx;
     }
-    const userOp = await this.smart_account.buildUserOp([tx]);
+    let txs: any[] = [];
+    if (Array.isArray(tx)) {
+      txs = tx;
+    } else {
+      txs.push(tx);
+    }
+    console.log(txs);
+    const userOp = await this.smart_account.buildUserOp(txs);
     const biconomyPaymaster = this.smart_account
       .paymaster as IHybridPaymaster<SponsorUserOperationDto>;
     try {
