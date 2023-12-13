@@ -13,12 +13,12 @@ import {
 } from "@biconomy/paymaster";
 
 import axios from "axios";
-import { Web3Provider } from "@ethersproject/providers";
+import { Web3Provider, ExternalProvider } from "@ethersproject/providers";
 
 export class SCW {
   private api_key!: string;
-  private gateway_url: string = "https://gateway-dev.arcana.network/";
-  private provider!: Web3Provider;
+  private gateway_url: string = "https://gateway.arcana.network";
+  private provider!: Web3Provider | ExternalProvider;
   private wallet!: Signer;
   private scwAddress!: string;
   private smart_account!: BiconomySmartAccount;
@@ -30,7 +30,23 @@ export class SCW {
     wallet: Signer,
     gateway_url: string | undefined
   ) {
-    this.provider = wallet.provider as Web3Provider;
+    // @ts-ignore
+    if (typeof this.provider?.request === "function") {
+      this.provider = new Web3Provider(this.provider as ExternalProvider);
+    } else {
+      this.provider = wallet.provider as Web3Provider;
+    }
+    if (arcana_key.includes("xar")) {
+      let [xar, env, key] = arcana_key.split("_");
+      arcana_key = key;
+      if (env == "dev") {
+        this.gateway_url = "https://gateway-dev.arcana.network";
+      } else if (env == "test") {
+        this.gateway_url = "https://gateway001-testnet.arcana.network";
+      } else if (env == "live") {
+        this.gateway_url = "https://gateway.arcana.network";
+      }
+    }
     this.wallet = wallet;
     // @ts-ignore
     if (this.provider.provider?.addressType == "scw") {
