@@ -1,15 +1,32 @@
 {
   "name": "@arcana/scw",
-  "version": "0.0.22",
-  "main": "dist/index.js",
+  "version": "0.0.23",
+  "main": "dist/standalone/scw.esm.js",
+  "type": "module",
+  "module": "dist/standalone/scw.esm.js",
+  "jsdelivr": "dist/standalone/scw.umd.js",
+  "unpkg": "dist/standalone/scw.umd.js",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "require": "./dist/standalone/scw.esm.js",
+      "import": "./dist/standalone/scw.esm.js"
+    }
+  },
+  "types": "types/index.d.ts",
   "files": [
     "dist",
     "types"
   ],
   "scripts": {
-    "build": "rimraf dist types && npm run build:ts && npm run build:web",
-    "build:web": "webpack",
-    "build:ts": "tsc --project tsconfig.json",
+    "clean": "run-p clean:dist clean:types",
+    "clean:dist": "rimraf dist/",
+    "clean:types": "rimraf types/",
+    "build": "run-s clean build:sdk ",
+    "build:sdk": "run-p build:esm build:umd build:ts",
+    "build:esm": "rollup --config rollup.es.config.js",
+    "build:umd": "rollup --config rollup.umd.config.js",
+    "build:ts": "tsc --project tsconfig.json --emitDeclarationOnly",
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepublish": "npm run build"
   },
@@ -17,9 +34,20 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@rollup/plugin-alias": "^3.1.9",
+    "@rollup/plugin-commonjs": "^22.0.1",
+    "@rollup/plugin-inject": "^4.0.4",
+    "@rollup/plugin-json": "^4.1.0",
+    "@rollup/plugin-node-resolve": "^13.3.0",
+    "@rollup/plugin-typescript": "^8.3.3",
+    "npm-run-all": "^4.1.5",
+    "rollup": "^2.75.7",
+    "rollup-plugin-postcss": "^4.0.2",
+    "rollup-plugin-terser": "^7.0.2",
     "ts-loader": "^9.4.3",
     "webpack": "^5.87.0",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "node-stdlib-browser": "^1.2.0"
   },
   "dependencies": {
     "@arcana/scw": "^0.0.8",
