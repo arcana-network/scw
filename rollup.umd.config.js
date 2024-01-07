@@ -5,7 +5,7 @@ export default {
   output: {
     file: "dist/standalone/scw.umd.js",
     format: "umd",
-    name: "arcana.auth",
+    name: "arcana.scw",
     compact: true,
   },
 };

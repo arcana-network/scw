@@ -9,9 +9,12 @@ export declare class SCW {
     private smart_account;
     private pre_scw;
     private smart_account_owner;
+    private paymaster_contract_address;
+    private paymaster_owner;
     init(arcana_key: string, wallet: Signer, gateway_url: string | undefined): Promise<void>;
     getOwner(): Promise<string>;
     getSCWAddress(): string;
-    doTx(tx: any): Promise<UserOpResponse>;
+    getPaymasterBalance(): Promise<number>;
+    doTx(tx: any, param: any): Promise<UserOpResponse>;
 }
 export { SCW as default };
