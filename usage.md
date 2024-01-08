@@ -9,7 +9,7 @@
 3. [Functions]
     - [`getSCWAddress()`](#getscwaddress)
     - [`getPaymasterBalance()`](#getpaymasterbalance)
-    -[`doTx()`](#dotx)
+    - [`doTx()`](#dotx)
 
 ---
 
