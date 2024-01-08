@@ -1,6 +1,6 @@
 {
   "name": "@arcana/scw",
-  "version": "0.0.23",
+  "version": "0.0.24",
   "main": "dist/standalone/scw.esm.js",
   "type": "module",
   "module": "dist/standalone/scw.esm.js",

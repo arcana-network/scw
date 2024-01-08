@@ -8,6 +8,7 @@ import { erc20abi } from "./erc20.js";
   console.log("EOA: ", await signer.getAddress());
   await scw.init("xar_test_4c309c33e0343cf9b68e7c7e4486da181f6038ec", signer);
   console.log("Address: " + scw.getSCWAddress());
+  console.log("Paymaster Balance: " + (await scw.getPaymasterBalance()) / 1e18);
 
   let amount = ethers.utils.parseUnits("0", 6);
   const erc20Address = "0xd513E4537510C75E24f941f159B7CAFA74E7B3B9";
@@ -26,7 +27,23 @@ import { erc20abi } from "./erc20.js";
     data: encodedData,
   };
 
-  let tx = await scw.doTx(tx0);
+  // let params = {
+  //   mode: "SPONSORED",
+  //   calculateGasLimits: false,
+  //   callGasLimit: 1000000,
+  //   verificationGasLimit: 1000000,
+  //   preVerificationGas: 1000000,
+  //   maxFeePerGas: 1000000000,
+  //   maxPriorityFeePerGas: 1000000000,
+  // };
+
+  let params = {
+    mode: "SPONSORED",
+    calculateGasLimits: true,
+  };
+
+  let tx = await scw.doTx(tx0, params);
+
   let txDetails = await tx.wait();
   console.log("txHash:(CORRECT) " + txDetails.receipt.transactionHash);
 })();
