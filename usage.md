@@ -16,7 +16,7 @@
 ## Installation
 
 ```
-npm i @arcana/scw@0.0.22
+npm i @arcana/scw
 ```
 
 ## Usage

@@ -39,7 +39,7 @@ Arcana Network gasless SDK is powered by Biconomy and supported for all the bloc
 ## npm
 
 ```sh
-npm install --save @arcana/scw@0.0.24
+npm install --save @arcana/scw
 ```
 
 ## Prerequisites
