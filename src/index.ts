@@ -222,7 +222,6 @@ export class SCW {
         `/api/v1/paymaster/${this.chain_id}/`,
         { userOp: stringifiedUserOp }
       );
-      userOp.verificationGasLimit += 40000;
       userOp.paymasterAndData = res.data.paymasterAndData;
     }
     const userOpResponse = await this.smart_account.sendUserOp(userOp);
