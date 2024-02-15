@@ -9,6 +9,7 @@ import {
   BiconomyPaymaster,
   PaymasterMode as BiconomyPaymasterMode,
   IHybridPaymaster,
+  PaymasterAndDataResponse,
   SponsorUserOperationDto,
 } from "@biconomy/paymaster";
 
@@ -137,6 +138,38 @@ export class SCW {
     return balance;
   }
 
+  private async getPaymasterDataRaw(
+    tx: any,
+    param: any,
+    userOp: any
+  ): Promise<PaymasterAndDataResponse> {
+    const biconomyPaymaster = this.smart_account
+      .paymaster as IHybridPaymaster<SponsorUserOperationDto>;
+
+    let paymasterServiceData: SponsorUserOperationDto = {
+      mode: BiconomyPaymasterMode.SPONSORED,
+      calculateGasLimits: param.calculateGasLimits,
+    };
+    const paymasterAndDataResponse =
+      await biconomyPaymaster.getPaymasterAndData(userOp, paymasterServiceData);
+    return paymasterAndDataResponse;
+  }
+
+  public async getPaymasterData(tx: any): Promise<PaymasterAndDataResponse> {
+    const PARAM = {
+      mode: PaymasterMode.BICONOMY,
+      calculateGasLimits: true,
+    };
+
+    let userOp: any = await this.smart_account.buildUserOp(tx);
+    const paymasterAndDataResponse = await this.getPaymasterDataRaw(
+      tx,
+      PARAM,
+      userOp
+    );
+    return paymasterAndDataResponse;
+  }
+
   public async doTx(tx: any, param?: any): Promise<UserOpResponse> {
     if (this.pre_scw) {
       tx = await this.wallet.sendTransaction(tx);
@@ -179,20 +212,11 @@ export class SCW {
     });
     if (param.mode === PaymasterMode.BICONOMY) {
       try {
-        const biconomyPaymaster = this.smart_account
-          .paymaster as IHybridPaymaster<SponsorUserOperationDto>;
-
-        let paymasterServiceData: SponsorUserOperationDto = {
-          mode: BiconomyPaymasterMode.SPONSORED,
-          calculateGasLimits: param.calculateGasLimits,
-        };
-        console.log("Paymaster Service Data", paymasterServiceData, userOp);
-        const paymasterAndDataResponse =
-          await biconomyPaymaster.getPaymasterAndData(
-            userOp,
-            paymasterServiceData
-          );
-        console.log("Paymaster and Data Response", paymasterAndDataResponse);
+        const paymasterAndDataResponse = await this.getPaymasterDataRaw(
+          tx,
+          param,
+          userOp
+        );
         userOp.paymasterAndData = paymasterAndDataResponse.paymasterAndData;
         console.log(
           "Paymaster and Data Response Set",
