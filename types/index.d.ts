@@ -1,6 +1,5 @@
 import { Signer } from "ethers";
 import { UserOpResponse } from "@biconomy/bundler";
-import { PaymasterAndDataResponse } from "@biconomy/paymaster";
 export declare enum PaymasterMode {
     SCW = "SCW",
     ARCANA = "ARCANA",
@@ -24,7 +23,7 @@ export declare class SCW {
     getSCWAddress(): string;
     getPaymasterBalance(): Promise<number>;
     private getPaymasterDataRaw;
-    getPaymasterData(tx: any): Promise<PaymasterAndDataResponse>;
+    getPaymasterData(tx: any): Promise<any>;
     doTx(tx: any, param?: any): Promise<UserOpResponse>;
 }
 export { SCW as default };
