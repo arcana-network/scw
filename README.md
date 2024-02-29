@@ -11,28 +11,26 @@
 <a title="CodeCov" href="https://codecov.io/gh/arcana-network/scw"> 
  <img src="https://codecov.io/gh/arcana-network/scw/branch/main/graph/badge.svg?token=KmdjEs3enL"/></a>
 </p><p id="start" align="center">
-<a href="https://docs.beta.arcana.network/"><img src="https://raw.githubusercontent.com/arcana-network/branding/main/an_banner_docs.png" alt="Arcana Gasless SDK"/></a>
+<a href="https://docs.beta.arcana.network/"><img src="https://raw.githubusercontent.com/arcana-network/branding/main/an_gasless_sdk_banner_feb_24.png" alt="Arcana Gasless SDK"/></a>
 </p>
 
 # Gasless (Standalone) SDK
 
-Arcana Gasless feature is available as a standalone SDK for Web3 apps that require to enable gasless feature. Install and integrate your app to enable gasless transactions.
+The Gasless (Standalone) SDK extends the Arcana wallet's gasless transaction capability to third-party wallets.
 
-When using the [Arcana Auth SDK](https://www.npmjs.com/package/@arcana/auth), the gasless feature is built-in and automatically available in the Arcana wallet.  Arcana wallet users can benefit by not having to pay gas fees for all the app operations that are whitelisted by the developer.
-
-If the app wishes to enable gasless transactions in third-party browser-based wallets, in addition to the Arcana wallet (embedded, non-custodial wallet within the Auth SDK), then they also need to install and integrate the app with standalone gasless SDK.
-
-Also, if the app does not wish to user any user onboarding feature or Arcana wallet offered by the Auth SDK, they can simply integrate directly with the gasless standalone SDK for enabling gasless transactions via any third-party browser-based wallets.
-
-## Use Cases
-
-1. Enabling gasless operations in multi-wallet apps that support other third party wallets besides the embedded, non-custodial Arcana wallet.
-
-2. Enabling gasless operations in apps that use third party wallets but not the Arcana wallet or do not require the onboarding feature of the Arcana Auth SDK.
+Web3 apps that require gasless transactions in third-party wallets can integrate with this SDK. To enable gasless transactions in third-party wallets and the Arcana wallet, apps must also integrate with the Auth SDK.
 
 ## Supported Blockchains
 
-Arcana Network gasless SDK is powered by Biconomy and supported for all the blockchain networks that Biconomy supports.
+The Gasless SDK integrates with third-party gasless providers such as Biconomy to provide gasless transactions. See the [list of blockchains](https://docs.arcana.network/state-of-the-arcana-auth#arcana-gasless-standalone-sdk) that support gasless transactions.
+
+## Prerequisites
+
+1. Register the app through the [Arcana Developer Dashboard](https://dashboard.arcana.network/) and obtain a unique client ID.
+
+2. Use the dashboard to add and fund gas tanks. Select white-listed app operations that will incur zero gas fees for the users. Not all supported blockchain networks may allow gasless transactions.
+
+3. Install the Gasless SDK and use the client ID to integrate the app. [Learn more...](https://docs.arcana.network/quick-start/gasless-standalone-quick-start)
 
 ## Installation
 
@@ -42,22 +40,14 @@ Arcana Network gasless SDK is powered by Biconomy and supported for all the bloc
 npm install --save @arcana/scw
 ```
 
-## Prerequisites
+## Documentation
 
-Before you can start using the Arcana Gasless SDK, you need to register your dApp using [Arcana Developer Dashboard](https://dashboard.arcana.network/).
+See [Arcana Network documentation](https://docs.arcana.network/), [Gasless SDK Quick Start Guide](https://docs.arcana.network/quick-start/gasless-quick-start.html), [Gasless Usage Guide](https://docs.arcana.network/gasless-sdk/gasless-usage-guide.html) and [integration examples](https://docs.arcana.network/tutorials/).
 
-A unique **App Address** will be assigned to your dApp and you need the same to initialize the Arcana Gasless SDK.  In addition, developers must also configure gas tanks, whitelist app operations that must be enabled as gasless.  These configuration settings can be handled via the Arcana Developer Dashboard.
-
-# 📚 Documentation
-
-Check out [Arcana Network documentation](https://docs.arcana.network/) for [Gasless SDK Quick Start Guide](https://docs.arcana.network/quick-start/gasless-quick-start.html), [Gasless Usage Guide](https://docs.arcana.network/gasless-sdk/gasless-usage-guide.html).
-
-# 💡 Support
+## Support
 
 For any support or integration-related queries, [contact us](https://docs.arcana.network/support.html).
 
-# ℹ️ License
+## License
 
-Arcana Gasless SDK is distributed under the [MIT License](https://fossa.com/blog/open-source-licenses-101-mit-license/).
-
-For details see [Arcana License](https://github.com/arcana-network/license/blob/main/LICENSE.md).
+Arcana Gasless SDK is distributed under the [MIT License](https://fossa.com/blog/open-source-licenses-101-mit-license/). For details, see [Arcana License](https://github.com/arcana-network/license/blob/main/LICENSE.md).
