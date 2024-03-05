@@ -5,14 +5,12 @@ import {
   createSmartAccountClient,
   DEFAULT_ENTRYPOINT_ADDRESS,
   SmartAccountSigner,
-} from "@biconomy/account";
-import { IBundler, Bundler, UserOpResponse } from "@biconomy/bundler";
-import {
   Paymaster,
   PaymasterMode as BiconomyPaymasterMode,
   IHybridPaymaster,
   SponsorUserOperationDto,
 } from "@biconomy/account";
+import { IBundler, Bundler, UserOpResponse } from "@biconomy/bundler";
 
 import axios, { Axios, AxiosInstance } from "axios";
 import { Web3Provider, ExternalProvider } from "@ethersproject/providers";
