@@ -3,7 +3,8 @@ import baseConfig from "./rollup.base.config";
 export default {
   ...baseConfig,
   output: {
-    dir: "dist/standalone",
+    file: "dist/standalone.cjs",
+    inlineDynamicImports: true,
     format: "cjs",
     name: "arcana.scw",
     compact: true,
