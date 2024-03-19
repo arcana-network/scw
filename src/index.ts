@@ -109,9 +109,10 @@ export class SCW {
       bundler: bundler,
     };
 
-    this.smart_account = await createSmartAccountClient(biconomySmartAccountConfig);
+    this.smart_account = await createSmartAccountClient(
+      biconomySmartAccountConfig
+    );
     this.scwAddress = await this.smart_account.getAccountAddress();
-    this.smart_account_owner = await (await this.smart_account.getOwner() as SmartAccountSigner).getAddress();
   }
 
   // function to get the owner
