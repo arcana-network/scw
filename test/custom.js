@@ -38,7 +38,7 @@ import { erc20abi } from "./erc20.js";
   // };
 
   let params = {
-    mode: "SPONSORED",
+    mode: "BICONOMY",
     calculateGasLimits: true,
   };
 

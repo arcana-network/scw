@@ -4,7 +4,6 @@ import {
   BiconomySmartAccountV2Config,
   createSmartAccountClient,
   DEFAULT_ENTRYPOINT_ADDRESS,
-  SmartAccountSigner,
   Paymaster,
   PaymasterMode as BiconomyPaymasterMode,
   IHybridPaymaster,
@@ -12,7 +11,7 @@ import {
 } from "@biconomy/account";
 import { IBundler, Bundler, UserOpResponse } from "@biconomy/bundler";
 
-import axios, { Axios, AxiosInstance } from "axios";
+import axios, { AxiosInstance } from "axios";
 import { Web3Provider, ExternalProvider } from "@ethersproject/providers";
 
 export enum PaymasterMode {
@@ -209,6 +208,13 @@ export class SCW {
     });
     if (param.mode === PaymasterMode.BICONOMY) {
       try {
+        console.log("Getting Paymaster Data", {
+          tx,
+          param,
+          userOp,
+          api_key: this.api_key,
+          chain_id: this.chain_id,
+        });
         const paymasterAndDataResponse = await this.getPaymasterDataRaw(
           tx,
           param,
