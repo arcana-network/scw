@@ -13,13 +13,18 @@ import {
   SponsorUserOperationDto,
 } from "@biconomy/paymaster";
 
-import axios, { Axios, AxiosInstance } from "axios";
+import axios, { AxiosInstance } from "axios";
 import { Web3Provider, ExternalProvider } from "@ethersproject/providers";
 
 export enum PaymasterMode {
   SCW = "SCW",
   ARCANA = "ARCANA",
   BICONOMY = "BICONOMY",
+}
+
+export type PaymasterParam = {
+  mode: PaymasterMode,
+  calculateGasLimits: boolean,
 }
 
 export class SCW {
@@ -155,18 +160,38 @@ export class SCW {
     return paymasterAndDataResponse;
   }
 
-  public async getPaymasterData(tx: any): Promise<PaymasterAndDataResponse> {
-    const PARAM = {
-      mode: PaymasterMode.BICONOMY,
-      calculateGasLimits: true,
+  public async getPaymasterData(tx: any, param: PaymasterParam = { calculateGasLimits: true, mode: PaymasterMode.BICONOMY }): Promise<PaymasterAndDataResponse> {
+    let userOp: any = await this.smart_account.buildUserOp(tx);
+    let paymasterAndDataResponse:PaymasterAndDataResponse = {
+      paymasterAndData : "0x",
+      callGasLimit : userOp.callGasLimit,
+      preVerificationGas : userOp.preVerificationGas,
+      verificationGasLimit : userOp.verificationGasLimit
     };
 
-    let userOp: any = await this.smart_account.buildUserOp(tx);
-    const paymasterAndDataResponse = await this.getPaymasterDataRaw(
-      tx,
-      PARAM,
-      userOp
-    );
+    switch (param.mode) {
+      case PaymasterMode.ARCANA:
+        let stringifiedUserOp = userOp as any;
+        Object.keys(stringifiedUserOp).forEach((key) => {
+          // Convert each value to string
+          stringifiedUserOp[key] = String(stringifiedUserOp[key]);
+        });
+        let res = await this.gateway_api.post(
+          `/api/v1/paymaster/${this.chain_id}/`,
+          { userOp: stringifiedUserOp }
+        );
+        paymasterAndDataResponse.paymasterAndData = res.data.paymasterAndData;
+        paymasterAndDataResponse.verificationGasLimit = Number(paymasterAndDataResponse.verificationGasLimit) + 60000
+        break;
+      case PaymasterMode.BICONOMY:
+        paymasterAndDataResponse = await this.getPaymasterDataRaw(
+          tx,
+          param,
+          userOp
+        );
+        break;
+    }
+
     return paymasterAndDataResponse;
   }
 
@@ -233,7 +258,7 @@ export class SCW {
           userOp.preVerificationGas =
             paymasterAndDataResponse.preVerificationGas;
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     if (param.mode === PaymasterMode.ARCANA) {
@@ -247,6 +272,7 @@ export class SCW {
         { userOp: stringifiedUserOp }
       );
       userOp.paymasterAndData = res.data.paymasterAndData;
+      userOp.verificationGasLimit += 60_000
     }
     const userOpResponse = await this.smart_account.sendUserOp(userOp);
     return userOpResponse;
