@@ -1,20 +1,20 @@
 import { Signer, ethers } from "ethers";
 import {
-  BiconomySmartAccount,
-  BiconomySmartAccountConfig,
+  BiconomySmartAccountV2,
+  BiconomySmartAccountV2Config,
+  createSmartAccountClient,
   DEFAULT_ENTRYPOINT_ADDRESS,
-} from "@biconomy/account";
-import { IBundler, Bundler, UserOpResponse } from "@biconomy/bundler";
-import {
-  BiconomyPaymaster,
+  SmartAccountSigner,
+  Paymaster,
   PaymasterMode as BiconomyPaymasterMode,
   IHybridPaymaster,
-  PaymasterAndDataResponse,
   SponsorUserOperationDto,
-} from "@biconomy/paymaster";
+} from "@biconomy/account";
+import { IBundler, Bundler,UserOpResponse } from "@biconomy/bundler";
 
 import axios, { AxiosInstance } from "axios";
 import { Web3Provider, ExternalProvider } from "@ethersproject/providers";
+import { PaymasterAndDataResponse } from "@biconomy/paymaster";
 
 export enum PaymasterMode {
   SCW = "SCW",
@@ -33,7 +33,7 @@ export class SCW {
   private provider!: Web3Provider | ExternalProvider;
   private wallet!: Signer;
   private scwAddress!: string;
-  private smart_account!: BiconomySmartAccount;
+  private smart_account!: BiconomySmartAccountV2;
   private pre_scw: boolean = false;
   private smart_account_owner!: string;
   private paymaster_contract_address!: string;
@@ -103,24 +103,22 @@ export class SCW {
     });
 
     let paymaster_url = `https://paymaster.biconomy.io/api/v1/${this.chain_id}/${this.api_key}`;
-    const paymaster = new BiconomyPaymaster({
+    const paymaster = new Paymaster({
       paymasterUrl: paymaster_url, // you can get this value from biconomy dashboard.
       strictMode: false,
     });
 
-    const biconomySmartAccountConfig: BiconomySmartAccountConfig = {
+    const biconomySmartAccountConfig: BiconomySmartAccountV2Config = {
       signer: this.wallet,
       chainId: this.chain_id,
       paymaster: paymaster, //you can skip paymaster instance if you are not interested in transaction sponsorship
       bundler: bundler,
     };
 
-    const biconomyAccount = new BiconomySmartAccount(
+    this.smart_account = await createSmartAccountClient(
       biconomySmartAccountConfig
     );
-    this.smart_account = await biconomyAccount.init();
-    this.scwAddress = await this.smart_account.getSmartAccountAddress();
-    this.smart_account_owner = await this.smart_account.owner;
+    this.scwAddress = await this.smart_account.getAccountAddress();
   }
 
   // function to get the owner
@@ -147,7 +145,7 @@ export class SCW {
     tx: any,
     param: any,
     userOp: any
-  ): Promise<PaymasterAndDataResponse> {
+  ): Promise<any> {
     const biconomyPaymaster = this.smart_account
       .paymaster as IHybridPaymaster<SponsorUserOperationDto>;
 
