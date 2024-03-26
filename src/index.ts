@@ -9,15 +9,21 @@ import {
   IHybridPaymaster,
   SponsorUserOperationDto,
 } from "@biconomy/account";
-import { IBundler, Bundler, UserOpResponse } from "@biconomy/bundler";
+import { IBundler, Bundler,UserOpResponse } from "@biconomy/bundler";
 
 import axios, { AxiosInstance } from "axios";
 import { Web3Provider, ExternalProvider } from "@ethersproject/providers";
+import { PaymasterAndDataResponse } from "@biconomy/paymaster";
 
 export enum PaymasterMode {
   SCW = "SCW",
   ARCANA = "ARCANA",
   BICONOMY = "BICONOMY",
+}
+
+export type PaymasterParam = {
+  mode: PaymasterMode,
+  calculateGasLimits: boolean,
 }
 
 export class SCW {
@@ -151,18 +157,38 @@ export class SCW {
     return paymasterAndDataResponse;
   }
 
-  public async getPaymasterData(tx: any): Promise<any> {
-    const PARAM = {
-      mode: PaymasterMode.BICONOMY,
-      calculateGasLimits: true,
+  public async getPaymasterData(tx: any, param: PaymasterParam = { calculateGasLimits: true, mode: PaymasterMode.BICONOMY }): Promise<PaymasterAndDataResponse> {
+    let userOp: any = await this.smart_account.buildUserOp(tx);
+    let paymasterAndDataResponse:PaymasterAndDataResponse = {
+      paymasterAndData : "0x",
+      callGasLimit : userOp.callGasLimit,
+      preVerificationGas : userOp.preVerificationGas,
+      verificationGasLimit : userOp.verificationGasLimit
     };
 
-    let userOp: any = await this.smart_account.buildUserOp(tx);
-    const paymasterAndDataResponse = await this.getPaymasterDataRaw(
-      tx,
-      PARAM,
-      userOp
-    );
+    switch (param.mode) {
+      case PaymasterMode.ARCANA:
+        let stringifiedUserOp = userOp as any;
+        Object.keys(stringifiedUserOp).forEach((key) => {
+          // Convert each value to string
+          stringifiedUserOp[key] = String(stringifiedUserOp[key]);
+        });
+        let res = await this.gateway_api.post(
+          `/api/v1/paymaster/${this.chain_id}/`,
+          { userOp: stringifiedUserOp }
+        );
+        paymasterAndDataResponse.paymasterAndData = res.data.paymasterAndData;
+        paymasterAndDataResponse.verificationGasLimit = Number(paymasterAndDataResponse.verificationGasLimit) + 60000
+        break;
+      case PaymasterMode.BICONOMY:
+        paymasterAndDataResponse = await this.getPaymasterDataRaw(
+          tx,
+          param,
+          userOp
+        );
+        break;
+    }
+
     return paymasterAndDataResponse;
   }
 
@@ -192,7 +218,17 @@ export class SCW {
     } else {
       txs.push(tx);
     }
+
     let userOp: any = await this.smart_account.buildUserOp(txs);
+    //Call getPaymasterData
+    const paymasterData = await this.getPaymasterData(txs, {
+      mode : param.mode,
+      calculateGasLimits : param.calculateGasLimits
+    })
+
+    Object.assign(userOp,paymasterData)
+
+    // Overide with user's supplied values
     const keys = [
       "callGasLimit",
       "verificationGasLimit",
@@ -200,57 +236,12 @@ export class SCW {
       "maxFeePerGas",
       "maxPriorityFeePerGas",
     ];
-
     keys.forEach((key) => {
       if (param[key] !== undefined) {
         userOp[key] = param[key];
       }
     });
-    if (param.mode === PaymasterMode.BICONOMY) {
-      try {
-        console.log("Getting Paymaster Data", {
-          tx,
-          param,
-          userOp,
-          api_key: this.api_key,
-          chain_id: this.chain_id,
-        });
-        const paymasterAndDataResponse = await this.getPaymasterDataRaw(
-          tx,
-          param,
-          userOp
-        );
-        userOp.paymasterAndData = paymasterAndDataResponse.paymasterAndData;
-        console.log(
-          "Paymaster and Data Response Set",
-          paymasterAndDataResponse
-        );
-        if (
-          paymasterAndDataResponse.callGasLimit &&
-          paymasterAndDataResponse.verificationGasLimit &&
-          paymasterAndDataResponse.preVerificationGas
-        ) {
-          userOp.callGasLimit = paymasterAndDataResponse.callGasLimit;
-          userOp.verificationGasLimit =
-            paymasterAndDataResponse.verificationGasLimit;
-          userOp.preVerificationGas =
-            paymasterAndDataResponse.preVerificationGas;
-        }
-      } catch (e) {}
-    }
-
-    if (param.mode === PaymasterMode.ARCANA) {
-      let stringifiedUserOp = userOp;
-      Object.keys(stringifiedUserOp).forEach((key) => {
-        // Convert each value to string
-        stringifiedUserOp[key] = String(stringifiedUserOp[key]);
-      });
-      let res = await this.gateway_api.post(
-        `/api/v1/paymaster/${this.chain_id}/`,
-        { userOp: stringifiedUserOp }
-      );
-      userOp.paymasterAndData = res.data.paymasterAndData;
-    }
+  
     const userOpResponse = await this.smart_account.sendUserOp(userOp);
     return userOpResponse;
   }
