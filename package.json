@@ -1,11 +1,11 @@
 {
   "name": "@arcana/scw",
-  "version": "0.0.31",
-  "main": "dist/standalone/scw.esm.js",
+  "version": "0.0.34",
+  "main": "dist/standalone.mjs",
   "type": "module",
-  "module": "dist/standalone/scw.esm.js",
-  "jsdelivr": "dist/standalone/scw.umd.js",
-  "unpkg": "dist/standalone/scw.umd.js",
+  "module": "dist/standalone.mjs",
+  "jsdelivr": "dist/standalone.mjs",
+  "unpkg": "dist/standalone.mjs",
   "exports": {
     ".": {
       "types": "./types/index.d.ts",
