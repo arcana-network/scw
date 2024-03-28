@@ -6,7 +6,7 @@ import { erc20abi } from "./erc20.js";
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   let signer = await provider.getSigner();
   console.log("EOA: ", await signer.getAddress());
-  await scw.init("xar_test_4c309c33e0343cf9b68e7c7e4486da181f6038ec", signer);
+  await scw.init("xar_dev_19759f514a8976ef8b125d93f9ba6908053a5174", signer);
   console.log("Address: " + scw.getSCWAddress());
   console.log("Paymaster Balance: " + (await scw.getPaymasterBalance()) / 1e18);
 
