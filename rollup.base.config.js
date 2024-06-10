@@ -6,6 +6,7 @@ import { handleCircularDependancyWarning } from "node-stdlib-browser/helpers/rol
 import stdLibBrowser from "node-stdlib-browser";
 import inject from "@rollup/plugin-inject";
 import postcss from "rollup-plugin-postcss";
+// import visualizer from "rollup-plugin-visualizer";
 
 const baseConfig = {
   input: "./src/index.ts",
@@ -26,6 +27,7 @@ const baseConfig = {
       plugins: [],
     }),
     terser(),
+    // visualizer({ open: true, filename: "./bundle-analysis.html" }),
   ],
   onwarn: (warning, rollupWarn) => {
     handleCircularDependancyWarning(warning, rollupWarn);

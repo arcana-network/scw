@@ -178,7 +178,7 @@ export class SCW {
           { userOp: stringifiedUserOp }
         );
         paymasterAndDataResponse.paymasterAndData = res.data.paymasterAndData;
-        paymasterAndDataResponse.verificationGasLimit = Number(paymasterAndDataResponse.verificationGasLimit) + 60000
+        paymasterAndDataResponse.verificationGasLimit = Number(paymasterAndDataResponse.verificationGasLimit) + 80000
         break;
       case PaymasterMode.BICONOMY:
         paymasterAndDataResponse = await this.getPaymasterDataRaw(
