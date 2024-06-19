@@ -14,6 +14,7 @@ import { IBundler, Bundler, UserOpResponse } from "@biconomy/bundler";
 import axios, { AxiosInstance } from "axios";
 import { Web3Provider, ExternalProvider } from "@ethersproject/providers";
 import { PaymasterAndDataResponse } from "@biconomy/paymaster";
+import { getDefaultStorageClient, ISessionStorage, SessionLocalStorage, SessionMemoryStorage } from "./session"
 
 export enum PaymasterMode {
   SCW = "SCW",
@@ -25,6 +26,16 @@ export type PaymasterParam = {
   mode: PaymasterMode;
   calculateGasLimits: boolean;
 };
+
+export enum SessionStorageType {
+  MEMORY = "MEMORY",
+  LOCAL = "LOCAL",
+}
+
+
+export type SessionConfig = {
+  storageType: SessionStorageType,
+}
 
 export class SCW {
   private api_key!: string;
@@ -39,6 +50,7 @@ export class SCW {
   private paymaster_owner!: string;
   private gateway_api: AxiosInstance;
   private chain_id!: number;
+  private session!: ISessionStorage;
 
   public async init(
     arcana_key: string,
@@ -251,6 +263,23 @@ export class SCW {
 
     const userOpResponse = await this.smart_account.sendUserOp(userOp);
     return userOpResponse;
+  }
+
+  public async initSession(config: SessionConfig) {
+    switch (config.storageType) {
+      case SessionStorageType.LOCAL:
+        //@ts-ignore
+        this.session = new SessionLocalStorage(this.scwAddress);
+        break;
+      case SessionStorageType.MEMORY:
+        //@ts-ignore
+        this.session = new SessionMemoryStorage(this.scwAddress);
+        break;
+      default:
+        //@ts-ignore
+        this.session = getDefaultStorageClient(this.scwAddress);
+    }
+
   }
 }
 
