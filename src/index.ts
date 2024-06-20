@@ -8,12 +8,15 @@ import {
   PaymasterMode as BiconomyPaymasterMode,
   IHybridPaymaster,
   SponsorUserOperationDto,
+  createSession,
+  PaymasterAndDataResponse,
+  IBundler,
+  Bundler,
+  UserOpResponse,
 } from "@biconomy/account";
-import { IBundler, Bundler, UserOpResponse } from "@biconomy/bundler";
 
 import axios, { AxiosInstance } from "axios";
 import { Web3Provider, ExternalProvider } from "@ethersproject/providers";
-import { PaymasterAndDataResponse } from "@biconomy/paymaster";
 import { getDefaultStorageClient, ISessionStorage, SessionLocalStorage, SessionMemoryStorage } from "./session"
 
 export enum PaymasterMode {
@@ -37,6 +40,21 @@ export type SessionConfig = {
   storageType: SessionStorageType,
 }
 
+export type CreateSessionParam = {
+  contractAddress: string,
+  functionSelector: string,
+  validUntil?: number,
+  validAfter?: number,
+  valueLimit?: number,
+}
+
+export type SupportedNetwork = {
+  rpc_url: string;
+  name: string;
+  chain_id: number;
+  currency: string,
+}
+
 export class SCW {
   private api_key!: string;
   private gateway_url: string = "https://gateway.arcana.network";
@@ -51,6 +69,7 @@ export class SCW {
   private gateway_api: AxiosInstance;
   private chain_id!: number;
   private session!: ISessionStorage;
+  private arcana_key!: string;
 
   public async init(
     arcana_key: string,
@@ -65,7 +84,7 @@ export class SCW {
     }
     if (arcana_key.includes("xar")) {
       let [xar, env, key] = arcana_key.split("_");
-      arcana_key = key;
+      this.arcana_key = key;
       if (env == "dev") {
         this.gateway_url = "https://gateway-dev.arcana.network";
       } else if (env == "test") {
@@ -101,7 +120,7 @@ export class SCW {
 
     // make a get request to gateway_url to get api key
     let res = await this.gateway_api.get(
-      `/api/v1/gastank/api-key/?app_address=${arcana_key}&chain_id=${this.chain_id}`
+      `/api/v1/gastank/api-key/?app_address=${this.arcana_key}&chain_id=${this.chain_id}`
     );
     this.api_key = res.data.api_key;
     this.paymaster_contract_address = res.data.paymaster.address;
@@ -265,7 +284,7 @@ export class SCW {
     return userOpResponse;
   }
 
-  public async initSession(config: SessionConfig) {
+  public initSession(config: SessionConfig) {
     switch (config.storageType) {
       case SessionStorageType.LOCAL:
         //@ts-ignore
@@ -279,6 +298,104 @@ export class SCW {
         //@ts-ignore
         this.session = getDefaultStorageClient(this.scwAddress);
     }
+
+  }
+
+
+
+  private async fetchSupportedNetworks() {
+    const data = await this.gateway_api.get(
+      `/api/v1/chains/${this.arcana_key}/`
+    );
+
+    console.log(`data ${JSON.stringify(data)}`);
+    
+    //convert to key-value
+    const chains = data.data.chains;
+    let tempChain = {}
+    for (let i = 0; i < chains.length; i++) {
+      //@ts-ignore
+      tempChain[chains[i].chain_id] = chains[i];
+    }
+
+    //@ts-ignore
+    return tempChain
+  }
+
+  public async createSession(config: CreateSessionParam) {
+    if (!this.session) {
+      throw new Error("Session not initialized");
+    }
+    const supportedNetworks = await this.fetchSupportedNetworks();
+    console.log(`after sup ${JSON.stringify(supportedNetworks)}`);
+
+    //@ts-ignore
+    const rpcUrls = {
+      default: {
+        //@ts-ignore
+        http: [supportedNetworks[this.chain_id].rpc_url]
+      }
+    };
+    //@ts-ignore
+    rpcUrls[this.chain_id] = supportedNetworks[this.chain_id].rpc_url;
+
+    //@ts-ignore
+    const ephermalAccount = await this.session.addSigner(null, {
+      id: this.chain_id,
+      rpcUrls
+    });
+
+    console.log("after signer");
+
+    const sessionKeyAddress = await ephermalAccount.getAddress()
+
+    const policy = [
+      {
+        /** The address of the sessionKey upon which the policy is to be imparted */
+        sessionKeyAddress,
+        /** The address of the contract to be included in the policy */
+        contractAddress: config.contractAddress,
+        /** The specific function selector from the contract to be included in the policy */
+        functionSelector: config.functionSelector,
+        /** The list of rules which make up the policy */
+        rules: [],
+        /** The time interval within which the session is valid. Setting both to 0 will keep a session alive indefinitely */
+        interval: {
+          validUntil: config.validUntil,
+          validAfter: config.validAfter,
+        },
+        /** The maximum value that can be transferred in a single transaction */
+        valueLimit: config.valueLimit,
+      },
+    ];
+
+    //@ts-ignore
+    const { wait, session } = await createSession(
+      this.smart_account,
+      //@ts-ignore
+      policy,
+      this.session,
+    );
+
+    console.log("after create session");
+
+    const {
+      receipt: { transactionHash },
+      success,
+    } = await wait();
+
+    console.log(
+      `Created Session with
+       ID :  ${session.sessionIDInfo[0]} 
+       txHash : ${transactionHash}`,
+    );
+
+    await this.session.updateSessionStatus(
+      {
+        sessionID: session.sessionIDInfo[0],
+      },
+      "ACTIVE",
+    );
 
   }
 }

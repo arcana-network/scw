@@ -51,7 +51,7 @@
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
-    "@biconomy/account": "^4.1.1",
+    "@biconomy/account": "^4.2.0",
     "@biconomy/modules": "^4.1.1",
     "axios": "^1.4.0",
     "crypto-browserify": "^3.12.0",
