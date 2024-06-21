@@ -1,4 +1,4 @@
-import { Signer, ethers } from "ethers";
+import { BigNumber, Signer, ethers } from "ethers";
 import {
   BiconomySmartAccountV2,
   BiconomySmartAccountV2Config,
@@ -8,12 +8,18 @@ import {
   PaymasterMode as BiconomyPaymasterMode,
   IHybridPaymaster,
   SponsorUserOperationDto,
+  createSession,
+  PaymasterAndDataResponse,
+  IBundler,
+  Bundler,
+  UserOpResponse,
+  createSessionSmartAccountClient,
+  getSingleSessionTxParams,
 } from "@biconomy/account";
-import { IBundler, Bundler, UserOpResponse } from "@biconomy/bundler";
 
 import axios, { AxiosInstance } from "axios";
 import { Web3Provider, ExternalProvider } from "@ethersproject/providers";
-import { PaymasterAndDataResponse } from "@biconomy/paymaster";
+import { getDefaultStorageClient, ISessionStorage, SessionLocalStorage, SessionMemoryStorage } from "./session"
 
 export enum PaymasterMode {
   SCW = "SCW",
@@ -25,6 +31,37 @@ export type PaymasterParam = {
   mode: PaymasterMode;
   calculateGasLimits: boolean;
 };
+
+export enum SessionStorageType {
+  MEMORY = "MEMORY",
+  LOCAL = "LOCAL",
+}
+
+
+export type SessionConfig = {
+  storageType: SessionStorageType,
+}
+
+export type CreateSessionParam = {
+  contractAddress: string,
+  functionSelector: string,
+  validUntil?: number,
+  validAfter?: number,
+  valueLimit?: number,
+}
+
+export type SupportedNetwork = {
+  rpc_url: string;
+  name: string;
+  chain_id: number;
+  currency: string,
+}
+
+export type SmartWalletTransaction = {
+  to: string,
+  data: string,
+  value: number | bigint,
+}
 
 export class SCW {
   private api_key!: string;
@@ -39,6 +76,9 @@ export class SCW {
   private paymaster_owner!: string;
   private gateway_api: AxiosInstance;
   private chain_id!: number;
+  private session!: ISessionStorage;
+  private arcana_key!: string;
+  private session_account!: BiconomySmartAccountV2;
 
   public async init(
     arcana_key: string,
@@ -53,7 +93,7 @@ export class SCW {
     }
     if (arcana_key.includes("xar")) {
       let [xar, env, key] = arcana_key.split("_");
-      arcana_key = key;
+      this.arcana_key = key;
       if (env == "dev") {
         this.gateway_url = "https://gateway-dev.arcana.network";
       } else if (env == "test") {
@@ -89,7 +129,7 @@ export class SCW {
 
     // make a get request to gateway_url to get api key
     let res = await this.gateway_api.get(
-      `/api/v1/gastank/api-key/?app_address=${arcana_key}&chain_id=${this.chain_id}`
+      `/api/v1/gastank/api-key/?app_address=${this.arcana_key}&chain_id=${this.chain_id}`
     );
     this.api_key = res.data.api_key;
     this.paymaster_contract_address = res.data.paymaster.address;
@@ -252,6 +292,216 @@ export class SCW {
     const userOpResponse = await this.smart_account.sendUserOp(userOp);
     return userOpResponse;
   }
+
+  public async initSession(config: SessionConfig) {
+    if (!this.smart_account) {
+      throw new Error("SCW wallet not initialized");
+    }
+
+    switch (config.storageType) {
+      case SessionStorageType.LOCAL:
+        //@ts-ignore
+        this.session = new SessionLocalStorage(this.scwAddress);
+        break;
+      case SessionStorageType.MEMORY:
+        //@ts-ignore
+        this.session = new SessionMemoryStorage(this.scwAddress);
+        break;
+      default:
+        //@ts-ignore
+        this.session = getDefaultStorageClient(this.scwAddress);
+    }
+
+    this.session_account = await createSessionSmartAccountClient(
+      {
+        //@ts-ignore
+        accountAddress: this.scwAddress, // Dapp can set the account address on behalf of the user
+        //@ts-ignore
+        bundlerUrl: this.smart_account.bundler.getBundlerUrl(),
+        chainId: this.chain_id,
+      },
+      this.session);
+
+  }
+
+  private async fetchSupportedNetworks() {
+    const res = await this.gateway_api.get(
+      `/api/v1/chains/${this.arcana_key}/`
+    );
+
+    //convert to key-value
+    const chains = res.data.chains;
+    let tempChain = {}
+    for (let i = 0; i < chains.length; i++) {
+      //@ts-ignore
+      tempChain[chains[i].chain_id] = chains[i];
+    }
+
+    //@ts-ignore
+    return tempChain
+  }
+
+  public async createSession(config: CreateSessionParam) {
+    if (!this.session) {
+      throw new Error("Session not initialized");
+    }
+    const supportedNetworks = await this.fetchSupportedNetworks();
+
+    //@ts-ignore
+    const rpcUrls = {
+      default: {
+        //@ts-ignore
+        http: [supportedNetworks[this.chain_id].rpc_url]
+      }
+    };
+    //@ts-ignore
+    rpcUrls[this.chain_id] = supportedNetworks[this.chain_id].rpc_url;
+
+    //@ts-ignore
+    const ephermalAccount = await this.session.addSigner(null, {
+      id: this.chain_id,
+      rpcUrls
+    });
+
+    const sessionKeyAddress = await ephermalAccount.getAddress()
+
+    const policy = [
+      {
+        /** The address of the sessionKey upon which the policy is to be imparted */
+        sessionKeyAddress,
+        /** The address of the contract to be included in the policy */
+        contractAddress: config.contractAddress,
+        /** The specific function selector from the contract to be included in the policy */
+        functionSelector: config.functionSelector,
+        /** The list of rules which make up the policy */
+        rules: [],
+        /** The time interval within which the session is valid. Setting both to 0 will keep a session alive indefinitely */
+        interval: {
+          validUntil: config.validUntil,
+          validAfter: config.validAfter,
+        },
+        /** The maximum value that can be transferred in a single transaction */
+        valueLimit: config.valueLimit,
+      },
+    ];
+
+    //@ts-ignore
+    const { wait, session } = await createSession(
+      this.smart_account,
+      //@ts-ignore
+      policy,
+      this.session,
+    );
+
+    const { receipt: { transactionHash } } = await wait();
+
+    console.info(
+      `Created Session with
+       ID :  ${session.sessionIDInfo[0]} 
+       txHash : ${transactionHash}`,
+    );
+
+    await this.session.updateSessionStatus(
+      {
+        sessionID: session.sessionIDInfo[0],
+      },
+      "ACTIVE",
+    );
+
+  }
+
+  private async getActiveSession(funcSelector: string, to: string, value: BigNumber) {
+    /*
+     TODO: Check which session is suitable based on 
+     - func selector
+     - dest contract 
+     - value limit
+     - validUnti > current time > validAfter
+     - status = ACTIVE
+     */
+    const sessions = await this.session.getAllSessionData();
+    const foundSession = sessions.find((element) => {
+      const sessionFuncSelector = element.sessionKeyData.slice(2).substring(80, 88)
+      const permittedAddress = element.sessionKeyData.slice(2).substring(40, 80)
+      const valueLimit = BigNumber.from("0x" + element.sessionKeyData.slice(2).substring(88, 120))
+     
+      if (element.status != "ACTIVE") return false;
+      console.log("active");
+      
+      if (sessionFuncSelector != funcSelector.slice(2)) return false;
+      console.log("func");
+
+      if (to.slice(2).toLowerCase() != permittedAddress.toLowerCase()) return false;
+      console.log("to");
+
+      if (value.gt(valueLimit) && !valueLimit.eq(0) ) return false;
+      console.log("value");
+
+      if ( (element.validUntil < Date.now() / 1000 ) && !valueLimit.eq(0) ) return false;
+      if ( (element.validAfter > Date.now() / 1000 ) && !valueLimit.eq(0) ) return false;
+
+      return true
+
+    });
+
+    return foundSession;
+
+  }
+
+  public async doSessionTx(tx: SmartWalletTransaction, param?: any) {
+
+    if (!this.session || !this.session_account) {
+      throw new Error("Session Object(s) not initialized");
+    }
+
+    const approvedSession = await this.getActiveSession(tx.data.slice(0,10), tx.to, BigNumber.from(tx.value));
+
+    if (!approvedSession) {
+      throw new Error("No active session found");
+    }
+
+    const supportedNetworks = await this.fetchSupportedNetworks();
+
+    //@ts-ignore
+    const rpcUrls = {
+      default: {
+        //@ts-ignore
+        http: [supportedNetworks[this.chain_id].rpc_url]
+      }
+    };
+    //@ts-ignore
+    rpcUrls[this.chain_id] = supportedNetworks[this.chain_id].rpc_url;
+
+    
+    const sessionParameters = await getSingleSessionTxParams(
+      {
+        //@ts-ignore
+        sessionIDInfo: [approvedSession.sessionID],
+        sessionStorageClient: this.session,
+      },
+      {
+        id: this.chain_id,
+        rpcUrls,
+      },
+      0, // index of the relevant policy leaf to the tx
+    );
+
+    const { wait } = await this.session_account.sendTransaction(
+      tx,
+      {
+        ...sessionParameters,
+        ...param
+      },
+    );
+
+    const receipt = await wait();
+
+    console.log(` 
+    userOpHash : ${receipt.userOpHash} 
+    txhash : ${receipt.receipt.transactionHash}`);
+
+  }
+
 }
 
 export { SCW as default };
