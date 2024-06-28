@@ -138,7 +138,7 @@ export class SCW {
 
     this.wallet = createWalletClient({
       account: account1,
-      chain : this.chain,
+      chain: this.chain,
       transport: custom(provider)
     })
 
@@ -434,10 +434,9 @@ export class SCW {
 
   }
 
-  public async doSessionTx(tx: SmartWalletTransaction, param?: any) {
-
+  public async doSessionTx(tx: SmartWalletTransaction, param?: any): Promise<UserOpResponse> {
     if (!this.session) {
-      throw new Error("Session Object(s) not initialized");
+      throw new Error("Session Object not initialized");
     }
 
     this.session_account = await createSessionSmartAccountClient(
