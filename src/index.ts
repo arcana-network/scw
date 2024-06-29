@@ -15,13 +15,15 @@ import {
   createSessionSmartAccountClient,
   getSingleSessionTxParams,
   Transaction,
+  DEFAULT_SESSION_KEY_MANAGER_MODULE,
+  DEFAULT_ECDSA_OWNERSHIP_MODULE,
 } from "@biconomy/account";
 
 import axios, { AxiosInstance } from "axios";
 import { getDefaultStorageClient, ISessionStorage, SessionLocalStorage, SessionMemoryStorage } from "./session"
 import type { Hex, EIP1193Provider, PublicClient, WalletClient } from "viem"
 import { custom, createPublicClient, createWalletClient, defineChain } from "viem"
-import * as chains from 'viem/chains'
+import type { Chain } from 'viem/chains'
 
 export enum PaymasterMode {
   SCW = "SCW",
@@ -39,6 +41,10 @@ export enum SessionStorageType {
   LOCAL = "LOCAL",
 }
 
+export type ModuleType = {
+  name: string,
+  address: Hex,
+}
 
 export type SessionConfig = {
   storageType: SessionStorageType,
@@ -78,7 +84,7 @@ export class SCW {
   private paymaster_owner!: Hex;
   private gateway_api: AxiosInstance;
   private chain_id!: number;
-  private chain!: chains.Chain;
+  private chain!: Chain;
   private session!: ISessionStorage;
   private arcana_key!: string;
   private session_account!: BiconomySmartAccountV2;
@@ -188,6 +194,29 @@ export class SCW {
     return this.scwAddress;
   }
 
+  public async getActiveModules(): Promise<ModuleType[]> {
+    const modules = await this.smart_account.getAllModules(10);
+    const activeModules: ModuleType[] = [];
+    for (let i = 0; i < modules.length; i++) {
+      switch (modules[i]) {
+        case DEFAULT_SESSION_KEY_MANAGER_MODULE:
+          activeModules.push({ name: "SESSION_KEY_MANAGER", address: modules[i] as Hex })
+          break;
+        case DEFAULT_ECDSA_OWNERSHIP_MODULE:
+          activeModules.push({ name: "ECDSA_OWNERSHIP", address: modules[i] as Hex })
+          break;
+        default:
+          activeModules.push({ name: "UnNamed", address: modules[i] as Hex })
+          break;
+      }
+    }
+    return activeModules;
+  }
+
+  public async addModule(module:Hex){
+    await this.smart_account.enableModule(module);
+  }
+
   public async getPaymasterBalance(): Promise<BigInt> {
     const balance = await this.provider.readContract({
       address: this.paymaster_contract_address,
@@ -272,12 +301,14 @@ export class SCW {
       };
       return tx;
     }
+
     if (param == undefined) {
       param = {
         mode: PaymasterMode.BICONOMY,
         calculateGasLimits: true,
       };
     }
+
     let txs: any[] = [];
     if (Array.isArray(tx)) {
       txs = tx;
