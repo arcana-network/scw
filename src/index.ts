@@ -11,7 +11,6 @@ import {
   PaymasterAndDataResponse,
   IBundler,
   Bundler,
-  UserOpResponse,
   createSessionSmartAccountClient,
   getSingleSessionTxParams,
   Transaction,
@@ -91,10 +90,8 @@ export class SCW {
   private gateway_api: AxiosInstance;
   private chain_id!: number;
   private chain!: Chain;
-  // private session!: ISessionStorage;
   private sessionManager!: SessionKeyManagerModule;
   private arcana_key!: string;
-  // private session_account!: BiconomySmartAccountV2;
 
   public async init(
     arcana_key: string,
@@ -451,7 +448,7 @@ export class SCW {
   }
 
   /**
-   * Send SCW transaction using Biconomy Smart Account Client 
+   * Send AA transaction using Biconomy Smart Account Client 
    * @param tx contains transaction object or array of transaction objects having properties like to, data, value 
    * @param param Optional parameters for transaction
    * 
