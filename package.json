@@ -3,14 +3,14 @@
   "version": "0.0.38",
   "main": "dist/standalone.mjs",
   "type": "module",
-  "module": "dist/standalone.mjs",
+  "module": "dist/index.js",
   "jsdelivr": "dist/standalone.mjs",
   "unpkg": "dist/standalone.mjs",
   "exports": {
     ".": {
       "types": "./types/index.d.ts",
       "require": "./dist/standalone.mjs",
-      "import": "./dist/standalone.mjs"
+      "import": "./dist/index.js"
     }
   },
   "types": "types/index.d.ts",
