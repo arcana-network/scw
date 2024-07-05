@@ -11,17 +11,23 @@ import {
   PaymasterAndDataResponse,
   IBundler,
   Bundler,
-  UserOpResponse,
   createSessionSmartAccountClient,
   getSingleSessionTxParams,
   Transaction,
+  DEFAULT_SESSION_KEY_MANAGER_MODULE,
+  DEFAULT_ECDSA_OWNERSHIP_MODULE,
+  createSessionKeyManagerModule,
+  StorageType,
+  SessionKeyManagerModule,
+  Rule,
+  UserOperationStruct,
+  BuildUserOpOptions
 } from "@biconomy/account";
 
 import axios, { AxiosInstance } from "axios";
-import { getDefaultStorageClient, ISessionStorage, SessionLocalStorage, SessionMemoryStorage } from "./session"
 import type { Hex, EIP1193Provider, PublicClient, WalletClient } from "viem"
 import { custom, createPublicClient, createWalletClient, defineChain } from "viem"
-import * as chains from 'viem/chains'
+import type { Chain } from 'viem/chains'
 
 export enum PaymasterMode {
   SCW = "SCW",
@@ -34,22 +40,34 @@ export type PaymasterParam = {
   calculateGasLimits: boolean;
 };
 
-export enum SessionStorageType {
-  MEMORY = "MEMORY",
-  LOCAL = "LOCAL",
+export type ModuleType = {
+  name: string,
+  address: Hex,
 }
 
-
-export type SessionConfig = {
-  storageType: SessionStorageType,
+export type TransactionOpts = {
+  mode?: PaymasterMode,
+  calculateGasLimits?: boolean,
+  session?: string | boolean,
+  overrideUserOp?: UserOperationStruct
 }
+/**
+ * @typedef {Object} CreateSessionParam - Session Configuration Object
+ * @property {string} contractAddress - The address of the contract to be included in the policy
+ * @property {string} functionSelector - The specific function selector from the contract to be included in the policy
+ * @property {number} [validUntil] - The time until which the session is valid. Setting both to 0 will keep a session alive indefinitely
+ * @property {number} [validAfter] - The time after which the session is valid. Setting both to 0 will keep a session alive indefinitely
+ * @property {number} [valueLimit] - The maximum value that can be transferred in a single transaction
+ * @property {Rule[]} [rules] - The list of rules which make up the policy
+ */
 
 export type CreateSessionParam = {
   contractAddress: string,
-  functionSelector: string,
+  functionSelector?: string,
   validUntil?: number,
   validAfter?: number,
   valueLimit?: number,
+  rules?: Rule[],
 }
 
 export type SupportedNetwork = {
@@ -58,6 +76,8 @@ export type SupportedNetwork = {
   chain_id: number;
   currency: string,
 }
+
+export type { Transaction, StorageType, Rule }
 
 export type SmartWalletTransaction = {
   to: Hex,
@@ -78,16 +98,31 @@ export class SCW {
   private paymaster_owner!: Hex;
   private gateway_api: AxiosInstance;
   private chain_id!: number;
-  private chain!: chains.Chain;
-  private session!: ISessionStorage;
+  private chain!: Chain;
+  private sessionManager!: SessionKeyManagerModule;
   private arcana_key!: string;
-  private session_account!: BiconomySmartAccountV2;
 
   public async init(
     arcana_key: string,
     provider: EIP1193Provider,
-    gateway_url: string | undefined
+    gateway_url: string | undefined,
+    sessionStorageType?: StorageType
   ) {
+    this.provider = createPublicClient({
+      transport: custom(provider)
+    });
+    const [account] = await provider.request({ method: 'eth_requestAccounts' })
+    let accountType = "eoa"
+    try {
+      // check if provider is arcana provider
+      //@ts-ignore
+      accountType = await provider.request({ method: '_arcana_getAccountType' })
+    } catch (e) {
+      // do nothing
+      console.info("Non-Arcana Provider")
+    }
+
+   
 
     if (arcana_key.includes("xar")) {
       let [xar, env, key] = arcana_key.split("_");
@@ -113,13 +148,6 @@ export class SCW {
       baseURL: this.gateway_url,
     });
 
-    this.provider = createPublicClient({
-      transport: custom(provider)
-    });
-
-    const [account1] = await provider.request({ method: 'eth_requestAccounts' })
-    // const [account] = await this.provider.request({ method: 'eth_requestAccounts' })
-
     this.chain_id = await this.provider.getChainId();
     const supportedNetworks = await this.fetchSupportedNetworks();
     if (supportedNetworks[this.chain_id] == undefined) {
@@ -137,13 +165,20 @@ export class SCW {
     })
 
     this.wallet = createWalletClient({
-      account: account1,
+      account,
       chain: this.chain,
       transport: custom(provider)
     })
 
-    // const [address] = await this.wallet.getAddresses() 
-    this.smart_account_owner = account1
+    if (accountType == "scw") {
+      this.pre_scw = true;
+      this.scwAddress = account;
+      return;
+    } else {
+      this.pre_scw = false;
+    }
+
+    this.smart_account_owner = account
 
     // make a get request to gateway_url to get api key
     let res = await this.gateway_api.get(
@@ -175,7 +210,15 @@ export class SCW {
     this.smart_account = await createSmartAccountClient(
       biconomySmartAccountConfig
     );
+
     this.scwAddress = await this.smart_account.getAccountAddress();
+
+    if (sessionStorageType)
+      this.sessionManager = await createSessionKeyManagerModule({
+        smartAccountAddress: this.scwAddress,
+        storageType: sessionStorageType,
+      });
+
   }
 
   // function to get the owner
@@ -186,6 +229,59 @@ export class SCW {
   // function to get the scw address
   public getSCWAddress(): string {
     return this.scwAddress;
+  }
+  /**
+   * Get the active validation modules of the SCW 
+   * @returns {ModuleType[]} Array of active modules
+   */
+  public async getActiveModules(): Promise<ModuleType[]> {
+    const modules = await this.smart_account.getAllModules(10);
+    const activeModules: ModuleType[] = [];
+    for (let i = 0; i < modules.length; i++) {
+      switch (modules[i]) {
+        case DEFAULT_SESSION_KEY_MANAGER_MODULE:
+          activeModules.push({ name: "SESSION_KEY_MANAGER", address: modules[i] as Hex })
+          break;
+        case DEFAULT_ECDSA_OWNERSHIP_MODULE:
+          activeModules.push({ name: "ECDSA_OWNERSHIP", address: modules[i] as Hex })
+          break;
+        default:
+          activeModules.push({ name: "UnNamed", address: modules[i] as Hex })
+          break;
+      }
+    }
+    return activeModules;
+  }
+
+  /**
+   * 
+   * @param module module address to be added
+   * 
+   * W.I.P: 🤫 using simple enum for popular modules
+   */
+  public async addModule(module: Hex) {
+    await this.smart_account.enableModule(module);
+  }
+
+  /**
+   * Remove module, Sibiling function to addModule, 
+   * @param module address of the module to be removed
+   */
+  public async removeModule(module: Hex) {
+    //identify prev module to be removed
+    const modules = await this.getActiveModules();
+    const moduleIndex = modules.findIndex((element) => element.address == module);
+    let prevModule: Hex;
+    switch (moduleIndex) {
+      case -1:
+        throw new Error("Module not found");
+      case 0:
+        prevModule = "0x0000000000000000000000000000000000000001" // SENTINEL MODULE
+        break;
+      default:
+        prevModule = modules[moduleIndex - 1].address
+    }
+    await this.smart_account.disableModule(prevModule, modules[moduleIndex].address);
   }
 
   public async getPaymasterBalance(): Promise<BigInt> {
@@ -257,82 +353,26 @@ export class SCW {
 
     return paymasterAndDataResponse;
   }
-
-  public async doTx(tx: any, param?: any): Promise<UserOpResponse> {
-    if (this.pre_scw) {
-      tx = await this.wallet.sendTransaction(tx);
-      let orignalWait = tx.wait;
-      tx.wait = async () => {
-        let res = await orignalWait();
-        if (!res.receipt) {
-          res.receipt = {};
-        }
-        res.receipt.transactionHash = tx.hash;
-        return res;
-      };
-      return tx;
-    }
-    if (param == undefined) {
-      param = {
-        mode: PaymasterMode.BICONOMY,
-        calculateGasLimits: true,
-      };
-    }
-    let txs: any[] = [];
-    if (Array.isArray(tx)) {
-      txs = tx;
-    } else {
-      txs.push(tx);
-    }
-
-    let userOp: any = await this.smart_account.buildUserOp(txs);
-    //Call getPaymasterData
-    const paymasterData = await this.getPaymasterData(txs, {
-      mode: param.mode,
-      calculateGasLimits: param.calculateGasLimits,
-    });
-
-    Object.assign(userOp, paymasterData);
-
-    // Overide with user's supplied values
-    const keys = [
-      "callGasLimit",
-      "verificationGasLimit",
-      "preVerificationGas",
-      "maxFeePerGas",
-      "maxPriorityFeePerGas",
-    ];
-    keys.forEach((key) => {
-      if (param[key] !== undefined) {
-        userOp[key] = param[key];
-      }
-    });
-
-    const userOpResponse = await this.smart_account.sendUserOp(userOp);
-    return userOpResponse;
-  }
-
-  public async initSession(config: SessionConfig) {
+  /**
+   * Initialize Session Manager
+   * @param sessionStorageType Storage Type for Session Manager
+   * @throws Error if SCW wallet not initialized
+   * @return void, added session manager to the SCW class
+   */
+  public async initSession(sessionStorageType: StorageType) {
     if (!this.smart_account) {
       throw new Error("SCW wallet not initialized");
     }
 
-    switch (config.storageType) {
-      case SessionStorageType.LOCAL:
-        //@ts-ignore
-        this.session = new SessionLocalStorage(this.scwAddress);
-        break;
-      case SessionStorageType.MEMORY:
-        //@ts-ignore
-        this.session = new SessionMemoryStorage(this.scwAddress);
-        break;
-      default:
-        //@ts-ignore
-        this.session = getDefaultStorageClient(this.scwAddress);
-    }
-
+    this.sessionManager = await createSessionKeyManagerModule({
+      smartAccountAddress: this.scwAddress,
+      storageType: sessionStorageType || StorageType.LOCAL_STORAGE,
+    })
   }
-
+  /**
+   * Get supported networks by the Arcana App
+   * @returns {SupportedNetwork[]} Array of supported networks
+   */
   private async fetchSupportedNetworks() {
     const res = await this.gateway_api.get(
       `/api/v1/chains/${this.arcana_key}/`
@@ -350,13 +390,19 @@ export class SCW {
     return tempChain
   }
 
+  /**
+  * Create a session for a specific address with rules
+  * Address could be a contract address or an EOA, rules detact the condition on function arguments
+  * 
+  * Automatically adds the session to the session manager instance
+  * @param config Session Configuration Object
+  */
   public async createSession(config: CreateSessionParam) {
-    if (!this.session) {
+    if (!this.sessionManager) {
       throw new Error("Session not initialized");
     }
 
-    const ephermalAccount = await this.session.addSigner(undefined, this.chain);
-
+    const ephermalAccount = await this.sessionManager.sessionStorageClient.addSigner(undefined, this.chain);
     const sessionKeyAddress = await ephermalAccount.getAddress()
 
     const policy = [
@@ -384,7 +430,7 @@ export class SCW {
       this.smart_account,
       //@ts-ignore
       policy,
-      this.session,
+      this.sessionManager.sessionStorageClient
     );
 
     const { receipt: { transactionHash } } = await wait();
@@ -395,7 +441,7 @@ export class SCW {
        txHash : ${transactionHash}`,
     );
 
-    await this.session.updateSessionStatus(
+    await this.sessionManager.updateSessionStatus(
       {
         sessionID: session.sessionIDInfo[0],
       },
@@ -403,9 +449,14 @@ export class SCW {
     );
 
   }
-
-  private async getActiveSession(funcSelector: Hex, to: Hex, value: BigInt) {
-    const sessions = await this.session.getAllSessionData();
+  /**
+   * A helper function to get the active session for the transaction
+   * @param tx 
+   * @returns Session ID if found else undefined
+   * 
+   */
+  private async getActiveSession(tx: Transaction) {
+    const sessions = await this.sessionManager.sessionStorageClient.getAllSessionData();
     const foundSession = sessions.find((element) => {
       const slicedSessionData = element.sessionKeyData.slice(2)
       const sessionFuncSelector = slicedSessionData.substring(80, 88)
@@ -414,12 +465,18 @@ export class SCW {
 
       if (element.status != "ACTIVE") return false;
 
-      if (sessionFuncSelector != funcSelector.slice(2)) return false;
+      // check if the tx is contract interaction
+      //@ts-ignore
+      if (tx.data?.length > 2) {
+        //@ts-ignore
+        const funcSelector = tx.data?.slice(2, 10)
+        if (sessionFuncSelector != funcSelector) return false;
+      }
 
-      if (to.slice(2).toLowerCase() != permittedAddress.toLowerCase()) return false;
+      if (tx.to.slice(2).toLowerCase() != permittedAddress.toLowerCase()) return false;
 
       //@ts-ignore
-      if (value > valueLimit && valueLimit != 0) return false;
+      if (tx.value > valueLimit && valueLimit != 0) return false;
 
       //@ts-ignore
       if ((element.validUntil < Date.now() / 1000) && valueLimit != 0n) return false;
@@ -430,56 +487,94 @@ export class SCW {
       return true
     });
 
-    return foundSession;
+    return foundSession?.sessionID;
 
   }
 
-  public async doSessionTx(tx: SmartWalletTransaction, param?: any): Promise<UserOpResponse> {
-    if (!this.session) {
-      throw new Error("Session Object not initialized");
+  /**
+   * Send AA transaction using Biconomy Smart Account Client 
+   * @param tx contains transaction object or array of transaction objects having properties like to, data, value 
+   * @param param Optional parameters for transaction
+   * 
+   *  - `session` is for using Session Validation Module,
+   *  can be passed as true (for auto selection of suitable session) or sessionID string itself 
+   * - `mode` is for Paymaster Sponsership, transaction will be sponsored by paymaster subjected to availability
+   * @returns {UserOpResponse} UserOpResponse having `wait` and `waitForTxHash` functions to wait for transaction to be mined
+   * 
+   */
+  public async doTx(tx: Transaction, param?: TransactionOpts) {
+    if (this.pre_scw) {
+      return await this.wallet.sendTransaction(tx as any);
     }
 
-    this.session_account = await createSessionSmartAccountClient(
-      {
-        //@ts-ignore
-        accountAddress: this.scwAddress, // Dapp can set the account address on behalf of the user
-        //@ts-ignore
-        bundlerUrl: this.smart_account.bundler.getBundlerUrl(),
-        chainId: this.chain_id,
-      },
-      this.session);
-
-    const txdata = tx.data.slice(0, 10) as Hex
-    const approvedSession = await this.getActiveSession(txdata, tx.to, tx.value);
-
-    if (!approvedSession) {
-      throw new Error("No active session found");
+    let txs: any[] = [];
+    if (Array.isArray(tx)) {
+      txs = tx;
+    } else {
+      txs.push(tx);
     }
 
-    const sessionParameters = await getSingleSessionTxParams(
-      {
-        //@ts-ignore
-        sessionIDInfo: [approvedSession.sessionID],
-        sessionStorageClient: this.session,
-      },
-      this.chain,
-      0, // index of the relevant policy leaf to the tx
-    );
+    let Options: BuildUserOpOptions = {}
+    //Session
+    let smartAccount = this.smart_account;
+    if (param?.session) {
+      if (!this.sessionManager) {
+        throw new Error("Session not initialized. use initSession() to initialize session manager");
+      }
 
-    const receipt = await this.session_account.sendTransaction(
-      [tx as Transaction],
-      {
-        ...sessionParameters,
-        ...param
-      },
-    );
+      let sessionID: string | undefined
 
-    console.log(`userOpHash : ${receipt.userOpHash} `);
+      if (typeof param.session == 'boolean' && param.session) {
+        sessionID = await this.getActiveSession(tx)
+      }
 
-    return receipt;
+      if (typeof param.session == 'string') {
+        sessionID = param.session
+      }
 
+      const sessionParameters = await getSingleSessionTxParams(
+        {
+          //@ts-ignore
+          sessionIDInfo: [sessionID],
+          sessionStorageClient: this.sessionManager.sessionStorageClient,
+        },
+        this.chain,
+        0, // index of the relevant policy leaf to the tx
+      );
+
+      Options = { ...sessionParameters }
+
+      smartAccount = await createSessionSmartAccountClient(
+        {
+          //@ts-ignore
+          accountAddress: this.scwAddress, // Dapp can set the account address on behalf of the user
+          //@ts-ignore
+          bundlerUrl: this.smart_account.bundler.getBundlerUrl(),
+          chainId: this.chain_id,
+        },
+        this.sessionManager.sessionStorageClient);
+
+    }
+
+    let userOp: any = await smartAccount.buildUserOp(txs, Options);
+
+    //Paymaster options
+    if (param?.mode) {
+      const paymasterData = await this.getPaymasterData(txs, {
+        mode: param?.mode,
+        calculateGasLimits: param?.calculateGasLimits || true,
+      });
+      Object.assign(userOp, paymasterData);
+    }
+
+
+    if (param?.overrideUserOp) {
+      Object.assign(userOp, param?.overrideUserOp);
+    }
+
+    const userOpResponse = await smartAccount.sendUserOp(userOp);
+    return userOpResponse;
   }
+
 
 }
-
-export { SCW as default };
