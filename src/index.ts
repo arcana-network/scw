@@ -51,10 +51,19 @@ export type TransactionOpts = {
   session?: string | boolean,
   overrideUserOp?: UserOperationStruct
 }
+/**
+ * @typedef {Object} CreateSessionParam - Session Configuration Object
+ * @property {string} contractAddress - The address of the contract to be included in the policy
+ * @property {string} functionSelector - The specific function selector from the contract to be included in the policy
+ * @property {number} [validUntil] - The time until which the session is valid. Setting both to 0 will keep a session alive indefinitely
+ * @property {number} [validAfter] - The time after which the session is valid. Setting both to 0 will keep a session alive indefinitely
+ * @property {number} [valueLimit] - The maximum value that can be transferred in a single transaction
+ * @property {Rule[]} [rules] - The list of rules which make up the policy
+ */
 
 export type CreateSessionParam = {
   contractAddress: string,
-  functionSelector: string,
+  functionSelector?: string,
   validUntil?: number,
   validAfter?: number,
   valueLimit?: number,
@@ -113,13 +122,7 @@ export class SCW {
       console.info("Non-Arcana Provider")
     }
 
-    if (accountType == "scw") {
-      this.pre_scw = true;
-      this.scwAddress = account;
-      return;
-    } else {
-      this.pre_scw = false;
-    }
+   
 
     if (arcana_key.includes("xar")) {
       let [xar, env, key] = arcana_key.split("_");
@@ -167,6 +170,14 @@ export class SCW {
       transport: custom(provider)
     })
 
+    if (accountType == "scw") {
+      this.pre_scw = true;
+      this.scwAddress = account;
+      return;
+    } else {
+      this.pre_scw = false;
+    }
+
     this.smart_account_owner = account
 
     // make a get request to gateway_url to get api key
@@ -202,11 +213,11 @@ export class SCW {
 
     this.scwAddress = await this.smart_account.getAccountAddress();
 
-    if(sessionStorageType)
-    this.sessionManager = await createSessionKeyManagerModule({
-      smartAccountAddress: this.scwAddress,
-      storageType: sessionStorageType,
-    });
+    if (sessionStorageType)
+      this.sessionManager = await createSessionKeyManagerModule({
+        smartAccountAddress: this.scwAddress,
+        storageType: sessionStorageType,
+      });
 
   }
 
@@ -219,7 +230,10 @@ export class SCW {
   public getSCWAddress(): string {
     return this.scwAddress;
   }
-
+  /**
+   * Get the active validation modules of the SCW 
+   * @returns {ModuleType[]} Array of active modules
+   */
   public async getActiveModules(): Promise<ModuleType[]> {
     const modules = await this.smart_account.getAllModules(10);
     const activeModules: ModuleType[] = [];
@@ -239,10 +253,20 @@ export class SCW {
     return activeModules;
   }
 
+  /**
+   * 
+   * @param module module address to be added
+   * 
+   * W.I.P: 🤫 using simple enum for popular modules
+   */
   public async addModule(module: Hex) {
     await this.smart_account.enableModule(module);
   }
 
+  /**
+   * Remove module, Sibiling function to addModule, 
+   * @param module address of the module to be removed
+   */
   public async removeModule(module: Hex) {
     //identify prev module to be removed
     const modules = await this.getActiveModules();
@@ -329,7 +353,12 @@ export class SCW {
 
     return paymasterAndDataResponse;
   }
-
+  /**
+   * Initialize Session Manager
+   * @param sessionStorageType Storage Type for Session Manager
+   * @throws Error if SCW wallet not initialized
+   * @return void, added session manager to the SCW class
+   */
   public async initSession(sessionStorageType: StorageType) {
     if (!this.smart_account) {
       throw new Error("SCW wallet not initialized");
@@ -340,7 +369,10 @@ export class SCW {
       storageType: sessionStorageType || StorageType.LOCAL_STORAGE,
     })
   }
-
+  /**
+   * Get supported networks by the Arcana App
+   * @returns {SupportedNetwork[]} Array of supported networks
+   */
   private async fetchSupportedNetworks() {
     const res = await this.gateway_api.get(
       `/api/v1/chains/${this.arcana_key}/`
@@ -358,6 +390,13 @@ export class SCW {
     return tempChain
   }
 
+  /**
+  * Create a session for a specific address with rules
+  * Address could be a contract address or an EOA, rules detact the condition on function arguments
+  * 
+  * Automatically adds the session to the session manager instance
+  * @param config Session Configuration Object
+  */
   public async createSession(config: CreateSessionParam) {
     if (!this.sessionManager) {
       throw new Error("Session not initialized");
@@ -410,7 +449,12 @@ export class SCW {
     );
 
   }
-
+  /**
+   * A helper function to get the active session for the transaction
+   * @param tx 
+   * @returns Session ID if found else undefined
+   * 
+   */
   private async getActiveSession(tx: Transaction) {
     const sessions = await this.sessionManager.sessionStorageClient.getAllSessionData();
     const foundSession = sessions.find((element) => {
@@ -455,7 +499,8 @@ export class SCW {
    *  - `session` is for using Session Validation Module,
    *  can be passed as true (for auto selection of suitable session) or sessionID string itself 
    * - `mode` is for Paymaster Sponsership, transaction will be sponsored by paymaster subjected to availability
-   * @returns 
+   * @returns {UserOpResponse} UserOpResponse having `wait` and `waitForTxHash` functions to wait for transaction to be mined
+   * 
    */
   public async doTx(tx: Transaction, param?: TransactionOpts) {
     if (this.pre_scw) {
@@ -473,7 +518,7 @@ export class SCW {
     //Session
     let smartAccount = this.smart_account;
     if (param?.session) {
-      if(!this.sessionManager) {
+      if (!this.sessionManager) {
         throw new Error("Session not initialized. use initSession() to initialize session manager");
       }
 
@@ -533,6 +578,3 @@ export class SCW {
 
 
 }
-
-
-// export { SCW };
