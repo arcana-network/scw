@@ -1,6 +1,6 @@
 {
   "name": "@arcana/scw",
-  "version": "0.0.39",
+  "version": "0.0.41",
   "main": "dist/standalone.mjs",
   "type": "module",
   "module": "dist/index.js",
