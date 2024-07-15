@@ -77,7 +77,9 @@ export type SupportedNetwork = {
   currency: string,
 }
 
-export type { Transaction, StorageType, Rule }
+export type { Transaction,  Rule }
+
+export { StorageType }
 
 export type SmartWalletTransaction = {
   to: Hex,
