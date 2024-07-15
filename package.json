@@ -1,6 +1,6 @@
 {
   "name": "@arcana/scw",
-  "version": "0.0.39",
+  "version": "0.0.41",
   "main": "dist/standalone.mjs",
   "type": "module",
   "module": "dist/index.js",
@@ -8,12 +8,12 @@
   "unpkg": "dist/standalone.mjs",
   "exports": {
     ".": {
-      "types": "./types/index.d.ts",
+      "types": "./dist/types/index.d.ts",
       "require": "./dist/standalone.mjs",
       "import": "./dist/index.js"
     }
   },
-  "types": "types/index.d.ts",
+  "types": "dist/types/index.d.ts",
   "files": [
     "dist",
     "types"
