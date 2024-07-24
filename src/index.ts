@@ -12,7 +12,6 @@ import {
   IBundler,
   Bundler,
   createSessionSmartAccountClient,
-  getSingleSessionTxParams,
   Transaction,
   DEFAULT_SESSION_KEY_MANAGER_MODULE,
   DEFAULT_ECDSA_OWNERSHIP_MODULE,
@@ -421,7 +420,7 @@ export class SCW {
         /** The specific function selector from the contract to be included in the policy */
         functionSelector: config.functionSelector,
         /** The list of rules which make up the policy */
-        rules: [],
+        rules: config.rules || [],
         /** The time interval within which the session is valid. Setting both to 0 will keep a session alive indefinitely */
         interval: {
           validUntil: config.validUntil,
