@@ -69,7 +69,11 @@ Returns the balance available in the gas tank that can be utilized via the curre
 
 ### `createSession()`
 
-Creates session keys using the [`CreateSessionParam`](https://gasless-sdk-ref-guide.netlify.app/types/createsessionparam) policy and requests the user for permission. When the user initiates any app operation that fulfills the session policy, it will be autonomously approved.
+Creates session keys using the `CreateSession` method and specify the session policy via [`CreateSessionParam`](https://gasless-sdk-ref-guide.netlify.app/types/createsessionparam) parameter. 
+
+The user is requested for session creation permission. When the user initiates any app operation that fulfills the session policy, it will be autonomously approved.
+
+Session policy is set using [rules](https://docs.biconomy.io/Modules/abiSessionValidationModule#rules).
 
 ```ts
   import { SCW, StorageType  } from "@arcana/scw";
@@ -79,7 +83,7 @@ Creates session keys using the [`CreateSessionParam`](https://gasless-sdk-ref-gu
   type CreateSessionParam = {
     contractAddress: string;
     functionSelector: string;
-    rules: string[];
+    rules: Rule[];
     validUntil?: number;
     validAfter?: number;
     valueLimit?: number;
@@ -104,7 +108,7 @@ Creates session keys using the [`CreateSessionParam`](https://gasless-sdk-ref-gu
     validUntil: 0,  //no end time, infinite always allow
     validAfter: 0,   //no start time, infinite always allow
     valueLimit: 10,   //maximum 10 GWEI transaction is pre approved
-    rules
+    rules: rules
   };
 
   await scWallet.createSession(config);  //wait for user approval via the UI pop up accept/reject notification
