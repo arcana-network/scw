@@ -12,7 +12,6 @@ import {
   IBundler,
   Bundler,
   createSessionSmartAccountClient,
-  getSingleSessionTxParams,
   Transaction,
   DEFAULT_SESSION_KEY_MANAGER_MODULE,
   DEFAULT_ECDSA_OWNERSHIP_MODULE,
@@ -77,12 +76,19 @@ export type SupportedNetwork = {
   currency: string,
 }
 
-export type { Transaction, StorageType, Rule }
+export type { Transaction,  Rule }
+
+export { StorageType }
 
 export type SmartWalletTransaction = {
   to: Hex,
   data: Hex,
   value: BigInt,
+}
+
+type ActiveSessionResponse = {
+  sessionID: string | undefined,
+  sessionIndex: number,
 }
 
 export class SCW {
@@ -122,7 +128,7 @@ export class SCW {
       console.info("Non-Arcana Provider")
     }
 
-   
+
 
     if (arcana_key.includes("xar")) {
       let [xar, env, key] = arcana_key.split("_");
@@ -414,7 +420,7 @@ export class SCW {
         /** The specific function selector from the contract to be included in the policy */
         functionSelector: config.functionSelector,
         /** The list of rules which make up the policy */
-        rules: [],
+        rules: config.rules || [],
         /** The time interval within which the session is valid. Setting both to 0 will keep a session alive indefinitely */
         interval: {
           validUntil: config.validUntil,
@@ -455,40 +461,33 @@ export class SCW {
    * @returns Session ID if found else undefined
    * 
    */
-  private async getActiveSession(tx: Transaction) {
+  private async getActiveSession(tx: Transaction): Promise<string|undefined> {
     const sessions = await this.sessionManager.sessionStorageClient.getAllSessionData();
-    const foundSession = sessions.find((element) => {
-      const slicedSessionData = element.sessionKeyData.slice(2)
+    let foundSessionID;
+    for(let i = 0; i < sessions.length; i++) {
+      const slicedSessionData = sessions[i].sessionKeyData.slice(2)
       const sessionFuncSelector = slicedSessionData.substring(80, 88)
       const permittedAddress = slicedSessionData.substring(40, 80)
       const valueLimit = BigInt("0x" + slicedSessionData.substring(88, 120))
 
-      if (element.status != "ACTIVE") return false;
-
+      if (sessions[i].status != "ACTIVE") continue;
       // check if the tx is contract interaction
       //@ts-ignore
       if (tx.data?.length > 2) {
         //@ts-ignore
         const funcSelector = tx.data?.slice(2, 10)
-        if (sessionFuncSelector != funcSelector) return false;
+        console.info(`sessionFuncSelector ${sessionFuncSelector} ---- funcSelector ${funcSelector}`);
+        if (sessionFuncSelector != funcSelector) continue;
       }
+      if (tx.to.slice(2).toLowerCase() != permittedAddress.toLowerCase()) continue;
+      if ( BigInt( tx.value || 0 ) > valueLimit && valueLimit != BigInt(0) ) continue;
+      if ((sessions[i].validUntil < ( Date.now() / 1000 ) ) && sessions[i].validUntil != 0 ) continue;
+      if ((sessions[i].validAfter > ( Date.now() / 1000 ) ) && sessions[i].validAfter != 0 ) continue;
 
-      if (tx.to.slice(2).toLowerCase() != permittedAddress.toLowerCase()) return false;
+      foundSessionID = sessions[i].sessionID;
+    }
 
-      //@ts-ignore
-      if (tx.value > valueLimit && valueLimit != 0) return false;
-
-      //@ts-ignore
-      if ((element.validUntil < Date.now() / 1000) && valueLimit != 0n) return false;
-
-      //@ts-ignore
-      if ((element.validAfter > Date.now() / 1000) && valueLimit != 0n) return false;
-
-      return true
-    });
-
-    return foundSession?.sessionID;
-
+    return foundSessionID;
   }
 
   /**
@@ -523,25 +522,20 @@ export class SCW {
       }
 
       let sessionID: string | undefined
-
       if (typeof param.session == 'boolean' && param.session) {
         sessionID = await this.getActiveSession(tx)
       }
-
       if (typeof param.session == 'string') {
         sessionID = param.session
       }
 
-      const sessionParameters = await getSingleSessionTxParams(
-        {
-          //@ts-ignore
-          sessionIDInfo: [sessionID],
-          sessionStorageClient: this.sessionManager.sessionStorageClient,
-        },
-        this.chain,
-        0, // index of the relevant policy leaf to the tx
-      );
+      if (sessionID == undefined) {
+        throw new Error("Session not found");
+      }
 
+      console.info(`Using Session ID : ${sessionID}`)
+      const sessionSigner = await this.sessionManager.sessionStorageClient.getSignerBySession({ sessionID }, this.chain)
+      const sessionParameters = { params: { sessionSigner, sessionID } }
       Options = { ...sessionParameters }
 
       smartAccount = await createSessionSmartAccountClient(
@@ -552,8 +546,10 @@ export class SCW {
           bundlerUrl: this.smart_account.bundler.getBundlerUrl(),
           chainId: this.chain_id,
         },
-        this.sessionManager.sessionStorageClient);
-
+        {
+          sessionStorageClient: this.sessionManager.sessionStorageClient,
+          sessionIDInfo: [sessionID]
+       });
     }
 
     let userOp: any = await smartAccount.buildUserOp(txs, Options);

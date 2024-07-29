@@ -1,0 +1,20 @@
+{
+  "entryPoints": ["src/index.ts"],
+  "entryPointStrategy": "expand",
+  "name": "Gasless SDK Reference Guide",
+  "out": "htmldocs",
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeInternal": true,
+  "includeVersion": true,
+  "footerDate": true,
+  "footerTime": true,
+  "plugin": [
+    "typedoc-plugin-extras",
+    "typedoc-plugin-rename-defaults",
+    "typedoc-theme-hierarchy",
+    "typedoc-plugin-missing-exports"
+  ],
+  "theme": "hierarchy",
+  "customCss": "./typedoc-theme/an_style.css"
+}
