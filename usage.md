@@ -69,7 +69,7 @@ Returns the balance available in the gas tank that can be utilized via the curre
 
 ### `createSession()`
 
-Creates session keys using the `CreateSession` method and specify the session policy via [`CreateSessionParam`](https://gasless-sdk-ref-guide.netlify.app/types/createsessionparam) parameter. 
+Create session keys using the `CreateSession` method and specify the session policy via [`CreateSessionParam`](https://gasless-sdk-ref-guide.netlify.app/types/createsessionparam) parameter.
 
 The user is requested for session creation permission. When the user initiates any app operation that fulfills the session policy, it will be autonomously approved.
 
