@@ -1,5 +1,6 @@
 {
   "name": "@arcana/scw",
+  "description": "Arcana Gasless",
   "version": "0.0.43",
   "main": "dist/standalone.mjs",
   "type": "module",
@@ -28,7 +29,6 @@
     "build:cjs": "rollup --config rollup.cjs.config.js",
     "build:ts": "tsc --project tsconfig.json",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "docs": "typedoc --options typedoc.json",
     "htmldocs": "typedoc --options typedochtml.json",
     "prepublish": "npm run build"
   },
@@ -52,10 +52,10 @@
     "ts-loader": "^9.4.3",
     "typedoc": "^0.26.3",
     "typedoc-plugin-extras": "^3.0.0",
-    "typedoc-plugin-markdown": "^3.12.1",
+    "typedoc-plugin-markdown": "^4.2.3",
     "typedoc-plugin-missing-exports": "^3.0.0",
     "typedoc-plugin-rename-defaults": "^0.7.1",
-    "typedoc-theme-hierarchy": "^5.0.0",
+    "typedoc-material-theme": "^1.1.0",
     "webpack": "^5.87.0",
     "webpack-cli": "^5.1.4"
   },

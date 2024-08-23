@@ -10,6 +10,7 @@ import postcss from "rollup-plugin-postcss";
 
 const baseConfig = {
   input: "./src/index.ts",
+  external: ["@biconomy/bundler", "viem", "@ethersproject/providers"],
   plugins: [
     nodeResolve({
       browser: true,
