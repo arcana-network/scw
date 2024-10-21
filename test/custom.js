@@ -3,29 +3,29 @@ import { erc20abi } from "./erc20.js";
 (async () => {
   const scw = new arcana.scw.SCW();
   await window.ethereum.enable();
-  const provider = new ethers.providers.Web3Provider(window.ethereum);
-  let signer = await provider.getSigner();
-  console.log("EOA: ", await signer.getAddress());
-  await scw.init("xar_dev_19759f514a8976ef8b125d93f9ba6908053a5174", signer);
+  await scw.init(
+    "xar_dev_64fd93467489d19c82517c2a54c097358d4da332",
+    window.ethereum
+  );
   console.log("Address: " + scw.getSCWAddress());
-  // console.log("Paymaster Balance: " + (await scw.getPaymasterBalance()) / 1e18);
+  console.log("Paymaster Balance: " + (await scw.getPaymasterBalance()));
 
-  // let amount = ethers.utils.parseUnits("0", 6);
-  // const erc20Address = "0xd513E4537510C75E24f941f159B7CAFA74E7B3B9";
-  // const toAddress = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
-  // const Erc20Interface = new ethers.utils.Interface(erc20abi);
-  // // Encode an ERC-20 token transfer to recipientAddress of the specified amount
-  // const encodedData = Erc20Interface.encodeFunctionData("approve", [
-  //   toAddress,
-  //   amount,
-  // ]);
+  let amount = ethers.utils.parseUnits("0.000001", 18);
+  const erc20Address = "0x1Ba5e8cF8846d15287d4221bcaF609AD22cA9468";
+  const toAddress = "0xbd92a7c9BF0aE4CaaE3978f9177A696fe7eA179F";
+  const Erc20Interface = new ethers.utils.Interface(erc20abi);
+  // Encode an ERC-20 token transfer to recipientAddress of the specified amount
+  const encodedData = Erc20Interface.encodeFunctionData("transfer", [
+    toAddress,
+    amount,
+  ]);
 
   // // You need to create transaction objects of the following interface
-  // const tx0 = {
-  //   from: scw.getSCWAddress(),
-  //   to: erc20Address, // destination smart contract address
-  //   data: encodedData,
-  // };
+  const tx0 = {
+    from: scw.getSCWAddress(),
+    to: erc20Address, // destination smart contract address
+    data: encodedData,
+  };
 
   // let params = {
   //   mode: "SPONSORED",
@@ -37,13 +37,13 @@ import { erc20abi } from "./erc20.js";
   //   maxPriorityFeePerGas: 1000000000,
   // };
 
-  // let params = {
-  //   mode: "BICONOMY",
-  //   calculateGasLimits: true,
-  // };
+  let params = {
+    mode: "BICONOMY",
+    calculateGasLimits: true,
+  };
 
-  // let tx = await scw.doTx(tx0, params);
-
-  // let txDetails = await tx.wait();
-  // console.log("txHash:(CORRECT) " + txDetails.receipt.transactionHash);
+  let tx = await scw.doTx(tx0, params);
+  console.log(tx0, amount);
+  let txDetails = await tx.wait();
+  console.log("txHash:(CORRECT) " + txDetails.receipt.transactionHash);
 })();

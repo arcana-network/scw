@@ -25,7 +25,7 @@ import {
 
 import axios, { AxiosInstance } from "axios";
 import type { Hex, EIP1193Provider, PublicClient, WalletClient } from "viem"
-import { custom, createPublicClient, createWalletClient, defineChain } from "viem"
+import { custom, createPublicClient, createWalletClient, defineChain, parseAbi } from "viem"
 import type { Chain } from 'viem/chains'
 
 export enum PaymasterMode {
@@ -76,7 +76,7 @@ export type SupportedNetwork = {
   currency: string,
 }
 
-export type { Transaction,  Rule }
+export type { Transaction, Rule }
 
 export { StorageType }
 
@@ -293,7 +293,7 @@ export class SCW {
   public async getPaymasterBalance(): Promise<BigInt> {
     const balance = await this.provider.readContract({
       address: this.paymaster_contract_address,
-      abi: ["function getBalance(address) view returns (uint256)"],
+      abi: parseAbi(["function getBalance(address) view returns (uint256)"]),
       functionName: 'getBalance',
       args: [this.paymaster_owner]
     }) as BigInt
@@ -461,10 +461,10 @@ export class SCW {
    * @returns Session ID if found else undefined
    * 
    */
-  private async getActiveSession(tx: Transaction): Promise<string|undefined> {
+  private async getActiveSession(tx: Transaction): Promise<string | undefined> {
     const sessions = await this.sessionManager.sessionStorageClient.getAllSessionData();
     let foundSessionID;
-    for(let i = 0; i < sessions.length; i++) {
+    for (let i = 0; i < sessions.length; i++) {
       const slicedSessionData = sessions[i].sessionKeyData.slice(2)
       const sessionFuncSelector = slicedSessionData.substring(80, 88)
       const permittedAddress = slicedSessionData.substring(40, 80)
@@ -480,9 +480,9 @@ export class SCW {
         if (sessionFuncSelector != funcSelector) continue;
       }
       if (tx.to.slice(2).toLowerCase() != permittedAddress.toLowerCase()) continue;
-      if ( BigInt( tx.value || 0 ) > valueLimit && valueLimit != BigInt(0) ) continue;
-      if ((sessions[i].validUntil < ( Date.now() / 1000 ) ) && sessions[i].validUntil != 0 ) continue;
-      if ((sessions[i].validAfter > ( Date.now() / 1000 ) ) && sessions[i].validAfter != 0 ) continue;
+      if (BigInt(tx.value || 0) > valueLimit && valueLimit != BigInt(0)) continue;
+      if ((sessions[i].validUntil < (Date.now() / 1000)) && sessions[i].validUntil != 0) continue;
+      if ((sessions[i].validAfter > (Date.now() / 1000)) && sessions[i].validAfter != 0) continue;
 
       foundSessionID = sessions[i].sessionID;
     }
@@ -549,7 +549,7 @@ export class SCW {
         {
           sessionStorageClient: this.sessionManager.sessionStorageClient,
           sessionIDInfo: [sessionID]
-       });
+        });
     }
 
     let userOp: any = await smartAccount.buildUserOp(txs, Options);
@@ -569,8 +569,8 @@ export class SCW {
     }
 
     const userOpResponse = await smartAccount.sendUserOp(userOp);
+    console.log("--->",userOp, userOpResponse);
     return userOpResponse;
   }
-
 
 }
