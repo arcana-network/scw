@@ -3,10 +3,11 @@ import { erc20abi } from "./erc20.js";
 (async () => {
   const scw = new arcana.scw.SCW();
   await window.ethereum.enable();
-  await scw.init(
-    "xar_dev_64fd93467489d19c82517c2a54c097358d4da332",
-    window.ethereum
-  );
+  await scw.init({
+    arcana_key: "xar_dev_64fd93467489d19c82517c2a54c097358d4da332",
+    private_key: "",
+    rpc_url: "",
+  });
   console.log("Address: " + scw.getSCWAddress());
   console.log("Paymaster Balance: " + (await scw.getPaymasterBalance()));
 
