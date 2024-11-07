@@ -16,19 +16,17 @@
 
 # Gasless (Standalone) SDK
 
-The Gasless (Standalone) SDK extends the Arcana wallet's gasless transaction capability to third-party wallets.
-
-Web3 apps that require gasless transactions in third-party wallets can integrate with this SDK. To enable gasless transactions in third-party wallets and the Arcana wallet, apps must also integrate with the Auth SDK.
+Integrate with the Gasless (Standalone) SDK to enable gasless transactions via any third-party browser-based wallets such as MetaMask. Multi-wallet apps can enable gasless transactions via the Arcana wallet by integrating with the Arcana Auth SDK.
 
 ## Supported Blockchains
 
-The Gasless SDK integrates with third-party gasless providers such as Biconomy to provide gasless transactions. See the [list of blockchains](https://docs.arcana.network/state-of-the-arcana-auth#arcana-gasless-standalone-sdk) that support gasless transactions.
+The Gasless SDK uses third-party gasless providers (Biconomy) to provide gasless transactions. Gasless transactions are [supported only for these blockchains]( https://docs.biconomy.io/supportedNetworks).
 
 ## Prerequisites
 
 1. Register the app through the [Arcana Developer Dashboard](https://dashboard.arcana.network/) and obtain a unique client ID.
 
-2. Use the dashboard to add and fund gas tanks. Select white-listed app operations that will incur zero gas fees for the users. Not all supported blockchain networks may allow gasless transactions.
+2. Use the dashboard to set up gas tanks and deposit gas to fund the tank. Specify which app operations are white-listed. Users will pay zero gas fees when they issue whitelisted app operations via the SCW wallet address for one of the supported blockchain networks.
 
 3. Install the Gasless SDK and use the client ID to integrate the app. [Learn more...](https://docs.arcana.network/quick-start/gasless-standalone-quick-start)
 
